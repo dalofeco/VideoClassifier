@@ -34,7 +34,7 @@ The Video Expert System incorporates TensorFlow's machine learning capabilities 
 
 **Note:** Depending on your setup, you can replace `python3` with your command to execute Python 3. Also, the training steps parameter can be modified as desired.
 
-**Disclaimer:** The `VideoExpertSystem/scripts` folder is sourced from the official TensorFlow repo. It contains helper scripts for training and classifying, and is provided within for convenience, to avoid having to clone the entire repository. 
+**Disclaimer:** The `VideoExpertSystem/tf_scripts` folder is sourced from the official TensorFlow repo. It contains helper scripts for training and classifying, and is provided within for convenience, to avoid having to clone the entire repository. 
 
 
 
@@ -62,3 +62,9 @@ Python based tools to manage video, image frames, and classify into respective c
 ## Video Datasets
 
 - UCF Crime Dataset - http://crcv.ucf.edu/cchen/
+
+
+
+## Helpful Links
+
+- TensorFlow for Poets 2 Repo: https://github.com/googlecodelabs/tensorflow-for-poets-2
