@@ -1,5 +1,6 @@
 videos/*
 *.pyc
-tf/tf_files
+tf/tf_files*
+*/tf_files
 tests/*
 */node_modules

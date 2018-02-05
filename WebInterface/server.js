@@ -2,20 +2,61 @@
 var express = require('express')
 var app = express();
 
+// Experimental (more accurate) performance metrics
+const { performance } = require('perf_hooks');    
+
+var time = require('time');
+
 var fs = require('fs');
+
+// Debug switch
+var DEBUG = false;
 
 //-------------------------------------------------------------//
 
 //GET//
 app.get('/classify', function(req, res) {
+
+    // Mark starting point
+    //performance.mark('A');
+
+    
+    // To time the process, record current time
+    var start = performance.now()
+    
     var exec = require('child_process').exec;
-    exec('python ../classify.py fire.jpg', (error, stdout, stderr) => {
+    exec('cd ../VideoExpertSystem && python3 classify.py ../tests/fire.jpg', (error, stdout, stderr) => {
+        
+        // If an execution error occured, print it and return
         if (error) {
-            console.error('exec error : ${error}');
+            console.error(`exec error : ${error}`);
             return;
         }
-        res.send(`${stdout}`);
-        //console.log(`stderr: ${stderr}`);
+        
+        // Subtract current seconds with starting time
+        // var duration = time.time() - start;
+        // console.log(`Processed in: ${duration}`);
+
+        // Mark finished pointm and measure time
+        // performance.mark('B');
+        // performance.measure('A to B', 'A', 'B');
+        // const measure = performance.getEntriesByName('A to B')[0];
+        
+        // Clear all marks from performance to allow for next measurement
+        // performance.clearMarks();
+        // performance.clearMeasures();
+        
+        var duration = performance.now() - start;
+        
+        // Log the elapsed milliseconds
+        console.log(duration.toString() + ' milliseconds');
+
+        // debugging mode does not ignore errors/warnings
+        if (DEBUG)
+            console.log(`stderr: ${stderr}`);
+        
+        res.send(`${duration}: ${stdout}`);
+        
     });
 });
 
