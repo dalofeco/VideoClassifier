@@ -1,3 +1,4 @@
+// Express for request handling (web server)
 var express = require('express')
 var app = express();
 
@@ -8,7 +9,7 @@ var fs = require('fs');
 //GET//
 app.get('/classify', function(req, res) {
     var exec = require('child_process').exec;
-    exec('python classify.py fire.jpg', (error, stdout, stderr) => {
+    exec('python ../classify.py fire.jpg', (error, stdout, stderr) => {
         if (error) {
             console.error('exec error : ${error}');
             return;
