@@ -1,3 +1,4 @@
 videos/*
 *.pyc
-tensorflow/tf_files
+tf/tf_files
+tests/*
