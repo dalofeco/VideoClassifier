@@ -2,3 +2,4 @@ videos/*
 *.pyc
 tf/tf_files
 tests/*
+*/node_modules
