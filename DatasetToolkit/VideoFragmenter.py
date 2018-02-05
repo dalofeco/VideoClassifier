@@ -46,5 +46,5 @@ class VideoFragmenter:
 			self.extractFrames(videoName);
 
 
-vf = VideoFragmenter("fire");
+vf = VideoFragmenter("shooting");
 vf.extractAllFrames();
