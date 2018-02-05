@@ -1,5 +1,10 @@
-videos/*
 *.pyc
-tf/tf_files
-tests/*
 */node_modules
+*__pycache__*
+*.DS_Store
+
+*tf_files*
+
+tests
+videos
+tensorflow
