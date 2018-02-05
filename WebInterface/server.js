@@ -2,7 +2,10 @@
 var express = require('express')
 var app = express();
 
-// Experimental (more accurate) performance metrics
+var Client = require('node-rest-client').Client;
+var client = new Client();
+
+// Experimental (but more accurate) performance metrics
 const { performance } = require('perf_hooks');    
 
 var time = require('time');
@@ -16,23 +19,36 @@ var DEBUG = false;
 
 //GET//
 app.get('/classify', function(req, res) {
+        
+    console.log("GET Request");
 
     // Mark starting point
     //performance.mark('A');
-
     
     // To time the process, record current time
     var start = performance.now()
     
-    var exec = require('child_process').exec;
-    exec('cd ../VideoExpertSystem && python3 classify.py ../tests/fire.jpg', (error, stdout, stderr) => {
+    client.get("http://127.0.0.1:8081/classify", function(data, response) {
         
-        // If an execution error occured, print it and return
-        if (error) {
-            console.error(`exec error : ${error}`);
-            return;
-        }
+        // Print out the recieved data
+        console.log(data);
         
+        // Log the elapsed milliseconds
+        var duration = performance.now() - start;
+        console.log(duration.toString() + ' milliseconds');
+//    
+        res.send(data);
+    });
+        
+//    var exec = require('child_process').exec;
+//    exec('cd ../VideoExpertSystem && python3 classify.py ../tests/fire.jpg', (error, stdout, stderr) => {
+//        
+//        // If an execution error occured, print it and return
+//        if (error) {
+//            console.error(`exec error : ${error}`);
+//            return;
+//        }
+//        
         // Subtract current seconds with starting time
         // var duration = time.time() - start;
         // console.log(`Processed in: ${duration}`);
@@ -46,18 +62,18 @@ app.get('/classify', function(req, res) {
         // performance.clearMarks();
         // performance.clearMeasures();
         
-        var duration = performance.now() - start;
+        // var duration = performance.now() - start;
         
         // Log the elapsed milliseconds
-        console.log(duration.toString() + ' milliseconds');
+        // console.log(duration.toString() + ' milliseconds');
 
         // debugging mode does not ignore errors/warnings
-        if (DEBUG)
-            console.log(`stderr: ${stderr}`);
+        // if (DEBUG)
+        //     console.log(`stderr: ${stderr}`);
         
-        res.send(`${duration}: ${stdout}`);
+        // res.send(`${duration}: ${stdout}`);
         
-    });
+    // });
 });
 
 
