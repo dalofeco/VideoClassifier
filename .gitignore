@@ -3,8 +3,11 @@
 *__pycache__*
 *.DS_Store
 
+*.sav
+
 *tf_files*
+*/videos/*
+*/dataset/*
 
 tests
-
 tensorflow
