@@ -46,7 +46,7 @@ class Classifier():
         # read in the image_data
         self.image_data = tf.gfile.FastGFile(image_path, 'rb').read();
     
-    def classify(self, image_data=None):
+    def classifyCNN(self, image_data=None):
         
         if (image_data == None):
             image_data = self.image_data;
@@ -75,7 +75,7 @@ class ClassifyRequestHandler(BaseHTTPRequestHandler):
             print('GET Request')
             
             # Get classification
-            result = classifier.classify();
+            result = classifier.classifyCNN();
             
             # Log result
             print(result);
@@ -89,14 +89,3 @@ class ClassifyRequestHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", len(resultData))
             self.end_headers()
             self.wfile.write(resultData.encode());
-            
-            
-# Main
-if __name__ == '__main__':
-
-    # Classifier class 
-    classifier = Classifier("../tests/fire.jpg");
-
-    httpd = HTTPServer(("127.0.0.1", 8081), ClassifyRequestHandler);
-    httpd.serve_forever();
-    
