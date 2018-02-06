@@ -7,7 +7,9 @@ import os, sys, time
 LOAD_FROM_FILE = True
 SAVE_FILE = 'session.sav'
 CATEGORY = 'shooting'
+MODEL_VERSION = 0.3
 VIDEO_FPS = 30.0
+
 
 # Customizable keyboard controls
 PAUSE_HOTKEY = 'p'
@@ -25,10 +27,10 @@ class VideoClassifier:
     def __init__(self, category, state=0):
         
         # Frame interval to consider
-        self.interval = 2;
+        self.interval = 1;
         
         # Playback speed
-        self.playbackSpeed = 5;
+        self.playbackSpeed = VIDEO_FPS;
         
         # Recording mode starts off (saving frames to .jpg)
         self.recordFrame = False;
@@ -48,8 +50,10 @@ class VideoClassifier:
             print("No save file found.");
         
         # Directories
-        self.videosDirectory = "videos/" + category + "/";
-        self.framesDirectory = "dataset/" + category + "/"
+        self.tf_files_dir = "../Models/tf_files-v" + str(MODEL_VERSION) + "/"
+        self.videosDirectory = self.tf_files_dir + "videos/" + category + "/";
+        self.framesDirectory = self.tf_files_dir + "dataset/" + MODE + "/" + category + "/"
+        self.tryCreateDirectory(framesDirectory)
         
         # Define null image
         self.image = None;
@@ -59,6 +63,12 @@ class VideoClassifier:
         
         # Pause
         self.pause = False;
+        
+    def tryCreateDirectory(self, dir):
+        try:
+            os.mkdir(dir);
+        except FileExistsError:
+            pass
         
     # Start classification process
     def start(self):
@@ -127,7 +137,7 @@ class VideoClassifier:
                     if (not self.pause):
 
                         # Calculate needed sleep time for FPS sync
-                        sleepTime = (VIDEO_FPS / 60) - (time.time() - frameStartTime)
+                        sleepTime = (1 / VIDEO_FPS) - (time.time() - frameStartTime)
 
                         # Account for playback sleep
                         sleepTime *= (1 / self.playbackSpeed) 
@@ -221,13 +231,6 @@ keyboard.add_hotkey(SLOWER_HOTKEY, slowerPressed, args=[]);
 
 # Start classification window
 videoClassifier.start()
-
-
-# def backSpacePressed(videoDirectory):
-# 	# Stop video playback
-
-# 	# Move video to scraps directory
-# 	os.move(videoDirectory, videosDriectory + "scraps/");
 
 
 

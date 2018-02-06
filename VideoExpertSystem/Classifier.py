@@ -3,11 +3,10 @@ from http.server import HTTPServer
 
 import tensorflow as tf
 
-import json
 import time
 
 # Version of model to use [tf_files-vX.X]
-MODEL_VERSION = 0.1
+MODEL_VERSION = 0.2
 
 class Classifier():
 	
@@ -39,7 +38,7 @@ class Classifier():
                 self.softmax_tensor = self.sess.graph.get_tensor_by_name('final_result:0')
 
                 # Log loading time
-                print("Loaded in %s seconds!" % (time.time() - start));
+                print("Loaded Model v" + str(MODEL_VERSION) + " in %.2f seconds!" % (time.time() - start));
 
             
     def loadImage(self, image_path):
@@ -66,26 +65,4 @@ class Classifier():
         return result;
             
             
-class ClassifyRequestHandler(BaseHTTPRequestHandler):
-                
-    # Respond to GET requests
-    def do_GET(self):
-        if self.path == '/classify':
-            # Log request and increase counter
-            print('GET Request')
-            
-            # Get classification
-            result = classifier.classifyCNN();
-            
-            # Log result
-            print(result);
-            
-            # Convert to byte-like type
-            resultData = json.dumps(result);
-            
-            # Send response with result
-            self.send_response(200);
-            self.send_header("Content-Type", "application/json")
-            self.send_header("Content-Length", len(resultData))
-            self.end_headers()
-            self.wfile.write(resultData.encode());
+
