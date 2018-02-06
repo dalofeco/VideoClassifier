@@ -69,8 +69,12 @@ Python based tools to manage video, image frames, and classify into respective c
 #### Python Dependencies
 
 - TensorFlow
-- Numpy
+- TFLearn
+- Scikit-learn
 - OpenCV
+- Numpy
+- Scipy
+- tqdm - Progress bar support
 
 #### Node.js Dependencies
 
