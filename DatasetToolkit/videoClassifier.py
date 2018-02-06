@@ -110,7 +110,7 @@ class VideoClassifier:
                                     if (self.frameCount % self.interval == 0):
 
                                         # Write out onto framesDirectory with %d.jpg appended 
-                                        cv2.imwrite(self.framesDirectory + videoName[:-4] + "-%d.jpg" % self.frameCount, image);
+                                        cv2.imwrite(self.framesDirectory + videoName[:-4] + "-" + str(self.frameCount) + ".jpg", image);
                                         print("Added frame %d", self.frameCount);
 
                                 except Exception as e:
@@ -146,7 +146,7 @@ class VideoClassifier:
                 print(e);
                 
                 
-    def saveAndExit(self):
+    def save(self):
         print("Frame number: ");
         print(self.frameCount);
         
@@ -156,7 +156,6 @@ class VideoClassifier:
             
         print("Saved to " + SAVE_FILE);
             
-        os._exit(0)
             
     # Toggle recording frames on or off
     def toggleRecordFrame(self):
@@ -169,8 +168,10 @@ class VideoClassifier:
     def pauseToggle(self):
         if self.pause:
             self.pause = False
+            print("Unpaused.")
         else:
             self.pause = True
+            print("Paused." )
             
     def playFaster(self):
         if self.playbackSpeed < MAX_PLAYBACK_SPEED:
@@ -194,8 +195,8 @@ videoClassifier = VideoClassifier(CATEGORY);
 def recordPressed():
     videoClassifier.toggleRecordFrame();
     
-def saveAndExitPressed():
-    videoClassifier.saveAndExit();
+def savePressed():
+    videoClassifier.save();
     
 def exitPressed():
     print("Quitting...")
@@ -212,7 +213,7 @@ def slowerPressed():
 	
 # Add keyboard event function on space press
 keyboard.add_hotkey(TOGGLE_RECORD_HOTKEY, recordPressed, args=[]);
-keyboard.add_hotkey(SAVE_EXIT_HOTKEY, saveAndExitPressed, args=[]);
+keyboard.add_hotkey(SAVE_EXIT_HOTKEY, savePressed, args=[]);
 keyboard.add_hotkey(EXIT_HOTKEY, exitPressed, args=[]);
 keyboard.add_hotkey(PAUSE_HOTKEY, pausePressed, args=[]);
 keyboard.add_hotkey(FASTER_HOTKEY, fasterPressed, args=[]);

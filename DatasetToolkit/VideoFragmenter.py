@@ -46,5 +46,5 @@ class VideoFragmenter:
 			self.extractFrames(videoName);
 
 
-vf = VideoFragmenter("shooting");
+vf = VideoFragmenter("normal");
 vf.extractAllFrames();
