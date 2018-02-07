@@ -10,16 +10,11 @@ The Video Expert System (will) incorporate TensorFlow's machine learning capabil
 ##### Pre-requisites
 
 - Node.js
-
 - Python 3
-
 - TensorFlow 
-
 - OpenCV 
 
-  ​
-
-##### Instructions for Running Classifier Server for Trained Model
+#### Instructions for Running Classifier Server for Trained Model
 
 1. Clone the repository to your local machine.
 2. Copy the `tf_files` folder with your model to `/Models/tf_files-v{1.0}` replacing the brackets with your own version number.
@@ -33,7 +28,9 @@ The Video Expert System (will) incorporate TensorFlow's machine learning capabil
 
 
 
-##### Instructions for Training New CNN Image Recognition Model 
+
+
+#### Instructions for Training New CNN Image Recognition Model 
 1. Clone the repository to your local machine.
 2. Copy the training images onto the `Models/tf_files-v{1.0}/cnn/dataset` directory. Make sure all image files are divided into different folders, each folder named with the associated category/label.
 3. Navigate into the `VideoExpertSystem` folder with the command line.
@@ -48,7 +45,9 @@ The Video Expert System (will) incorporate TensorFlow's machine learning capabil
 
 
 
-##### Instructions for Dataset Construction using VideoClassifier
+
+
+#### Instructions for Dataset Construction using VideoClassifier
 
 1. Organize all videos into different folders, each with a unique category name to be recognized.
 2. Copy all videos to be classified onto `Models/tf_files-v1.0/videos` using the version number desired.
@@ -72,7 +71,9 @@ Usage: `python3 VideoClassifier.py (category) (model_version) [mode][state] [int
 
 
 
-##### Instructions for Dataset Construction using VideoFragmenter
+
+
+#### Instructions for Dataset Construction using VideoFragmenter
 
 1. Organize all videos into different folders, each with a unique category name to be recognized.
 
