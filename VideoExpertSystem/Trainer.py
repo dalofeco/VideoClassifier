@@ -12,17 +12,16 @@ from tqdm import tqdm
 import Classifier
 import Categories
 
-MODEL_VERSION = 0.2
-
 # Class for training CNN layer
 class CNNTrainer():
     
     # Constructor
-    def __init__(self, tf_files_dir='../Models/tf_files-v' + str(MODEL_VERSION) + '/'):
+    def __init__(self, modelVersion):
         
         # Initialize as class variables
-        self.tf_files_dir = tf_files_dir
-        self.dataset_dir = tf_files_dir + 'dataset/cnn/'
+        self.tf_files_dir = "../Models/tf_files-v{0}/".format(modelVersion)
+        self.dataset_dir = self.tf_files_dir + 'dataset/cnn/'
+        self.modelVersion = modelVersion;
         
     # Launches the retraining process for the CNN
     def retrain(self, architecture='inception_v3', training_steps=100):
@@ -51,18 +50,25 @@ class CNNTrainer():
 # Class for training RNN layer
 class RNNTrainer():
 
-    def __init__(self, labels, tf_files_dir='../Models/tf_files-v' + str(MODEL_VERSION) + '/'):
+    def __init__(self, labels, modelVersion):
         
-        # Initialize as class variables
-        self.tf_files_dir = tf_files_dir
-        self.dataset_dir = tf_files_dir + 'dataset/rnn/'
-        self.features_dir = tf_files_dir + 'features/'
+        # Define model version to use (tf_files-v[0.3])
+        self.modelVersion = modelVersion
+        
+        # Initialize important directories as class variables
+        self.tf_files_dir = '../Models/tf_files-v{0}/'.format(self.modelVersion)
+        self.dataset_dir = self.tf_files_dir + 'dataset/rnn/'
+        self.features_dir = self.tf_files_dir + 'features/'
+        
+        # Save labels to be considered
         self.labels = labels;
         
+    # Prepare data, then train
     def autoTrain(self):
         self.extractPoolLayerData(self.labels);
         self.train();
         
+    # Execute training after rnn dataset is ready
     def train(self):
         
         print("Initiating RNN training...")

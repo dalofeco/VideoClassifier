@@ -2,26 +2,28 @@ from http.server import BaseHTTPRequestHandler
 from http.server import HTTPServer
 
 import tensorflow as tf
-
 import time
-
-# Version of model to use [tf_files-vX.X]
-MODEL_VERSION = 0.2
 
 class Classifier():
 	
-    def __init__(self, imagePath):    
+    def __init__(self, imagePath, modelVersion):    
         # Performance monitoring
         start = time.time();
+        
+        # Version of model to use [tf_files-vX.X]
+        self.modelVersion = modelVersion
+        
+        # Initialize image data to None
+        self.image_data = None;
     
         # Load image into class variable
-        self.loadImage(imagePath);
+        # self.loadImage(imagePath);
         
         # Counter for logging purposes
         self.count = 0;
         
         # Use the model version directory
-        tf_files_dir = "../Models/tf_files-v%s" % MODEL_VERSION
+        tf_files_dir = "../Models/tf_files-v%s" % self.modelVersion
 
         # Loads label file, strips off carriage return
         self.label_lines = [line.rstrip() for line in tf.gfile.GFile(tf_files_dir + "/retrained_labels.txt")]
@@ -38,7 +40,7 @@ class Classifier():
                 self.softmax_tensor = self.sess.graph.get_tensor_by_name('final_result:0')
 
                 # Log loading time
-                print("Loaded Model v" + str(MODEL_VERSION) + " in %.2f seconds!" % (time.time() - start));
+                print("Loaded Model v" + str(self.modelVersion) + " in %.2f seconds!" % (time.time() - start));
 
             
     def loadImage(self, image_path):
@@ -47,9 +49,16 @@ class Classifier():
     
     def classifyCNN(self, image_data=None):
         
+        # If no image data was supplied
         if (image_data == None):
+            # And classifier hasn't loaded image
+            if (self.image_data == None):
+                print("No image loaded yet!")
+                return
+            # Load class image data
             image_data = self.image_data;
-        
+            
+        # Get predictions from softmax tensor layer
         predictions = self.sess.run(self.softmax_tensor, {'DecodeJpeg/contents:0': image_data})
 
         # Sort to show labels of first prediction in order of confidence

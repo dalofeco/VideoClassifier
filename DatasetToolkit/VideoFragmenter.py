@@ -98,11 +98,12 @@ class VideoFragmenter:
                 
         pbar.close()
 
-# Make sure expected num of arguments
-if (len(sys.argv) != 3):
-    print("Usage: VideoFragmenter.py CATEGORY MODE")
+if __name__ == '__main__':
+    # Make sure expected num of arguments
+    if (len(sys.argv) != 3):
+        print("Usage: VideoFragmenter.py CATEGORY MODE")
     
-elif (len(sys.argv) == 3):
-    vf = VideoFragmenter(sys.argv[1], sys.argv[2]);
-    vf.extractAllFrames();
+    elif (len(sys.argv) == 3):
+        vf = VideoFragmenter(sys.argv[1], sys.argv[2]);
+        vf.extractAllFrames();
 

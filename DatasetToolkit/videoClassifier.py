@@ -6,9 +6,7 @@ import os, sys, time
 # Options
 LOAD_FROM_FILE = True
 SAVE_FILE = 'session.sav'
-CATEGORY = 'shooting'
-MODEL_VERSION = 0.3
-VIDEO_FPS = 30.0
+DEFAULT_PLAYBACK_SPEED = 20;
 
 
 # Customizable keyboard controls
@@ -24,13 +22,21 @@ MAX_PLAYBACK_SPEED = 100
 
 class VideoClassifier:
     
-    def __init__(self, category, state=0):
+    def __init__(self, category, version, mode='cnn', state=0, interval=1):
+        
+        # Validate modes
+        if (mode != 'cnn' and mode != 'rnn'):
+            print("ERROR: Invalid mode specified! Only 'cnn' and 'rnn' modes supported.")
+            sys.exit()
+            
+        # Save mode
+        self.mode = mode;
         
         # Frame interval to consider
-        self.interval = 1;
+        self.interval = interval;
         
         # Playback speed
-        self.playbackSpeed = VIDEO_FPS;
+        self.playbackSpeed = DEFAULT_PLAYBACK_SPEED;
         
         # Recording mode starts off (saving frames to .jpg)
         self.recordFrame = False;
@@ -38,9 +44,16 @@ class VideoClassifier:
         # Optional state for loading previous classification process
         self.state = state;
         
+        # Save category and model version
+        self.category = category;
+        self.model_version = version
+        
+        # Generate categorical save file
+        self.saveFile = self.category + '-' + SAVE_FILE;
+        
         # Try to load previous progress from save file
-        if (LOAD_FROM_FILE and SAVE_FILE in os.listdir('.')):
-            with open(SAVE_FILE, 'r') as saveFile:
+        if (LOAD_FROM_FILE and self.saveFile in os.listdir('.')):
+            with open(self.saveFile, 'r') as saveFile:
                 data = saveFile.read();
                 if (data):
                     self.state = int(data);
@@ -50,10 +63,10 @@ class VideoClassifier:
             print("No save file found.");
         
         # Directories
-        self.tf_files_dir = "../Models/tf_files-v" + str(MODEL_VERSION) + "/"
+        self.tf_files_dir = "../Models/tf_files-v" + str(self.model_version) + "/"
         self.videosDirectory = self.tf_files_dir + "videos/" + category + "/";
-        self.framesDirectory = self.tf_files_dir + "dataset/" + MODE + "/" + category + "/"
-        self.tryCreateDirectory(framesDirectory)
+        self.framesDirectory = self.tf_files_dir + "dataset/" + self.mode + "/" + category + "/"
+        self.tryCreateDirectory(self.framesDirectory)
         
         # Define null image
         self.image = None;
@@ -121,10 +134,10 @@ class VideoClassifier:
 
                                         # Write out onto framesDirectory with %d.jpg appended 
                                         cv2.imwrite(self.framesDirectory + videoName[:-4] + "-" + str(self.frameCount) + ".jpg", image);
-                                        print("Added frame %d", self.frameCount);
+                                        print("Added frame %d" % self.frameCount);
 
                                 except Exception as e:
-                                    print("ERROR: Error with frame #%d", self.frameCount);
+                                    print("ERROR: Error with frame #%d" % self.frameCount);
                                     print(e);
 
                         else:
@@ -136,18 +149,12 @@ class VideoClassifier:
                         
                     if (not self.pause):
 
-                        # Calculate needed sleep time for FPS sync
-                        sleepTime = (1 / VIDEO_FPS) - (time.time() - frameStartTime)
-
-                        # Account for playback sleep
-                        sleepTime *= (1 / self.playbackSpeed) 
-                        
-                        # Avoid errors for negative times
-                        if (sleepTime > 0):
-                            time.sleep(sleepTime);
+                        # Calculate needed sleep time for speed sync and sleep
+                        sleepTime = (1 / self.playbackSpeed)                         
+                        time.sleep(sleepTime);
 
                    
-
+                # Release capture and close cv2 video playback window
                 cap.release();
                 cv2.destroyAllWindows();
 
@@ -155,12 +162,16 @@ class VideoClassifier:
                 print("ERROR: Capture Error")
                 print(e);
                 
+        # Print done message and delete save file
+        print("Finished analyzing {0} videos and {1} frames.".format(len(videoNames), self.frameCount))
+        os.remove(self.saveFile)
+                
                 
     def save(self):
         print("Frame number: ");
         print(self.frameCount);
         
-        with open(SAVE_FILE, 'w') as saveFile:
+        with open(self.saveFile, 'w') as saveFile:
             saveFile.write(str(self.frameCount));
             saveFile.close();
             
@@ -198,9 +209,6 @@ class VideoClassifier:
             print("Playback Speed Level: MIN")
 
 
-# Create new instance of classifier with category (folder name)
-videoClassifier = VideoClassifier(CATEGORY);
-            
 # Add frames to valid directory on space press
 def recordPressed():
     videoClassifier.toggleRecordFrame();
@@ -220,17 +228,59 @@ def fasterPressed():
     
 def slowerPressed():
     videoClassifier.playSlower();
-	
-# Add keyboard event function on space press
-keyboard.add_hotkey(TOGGLE_RECORD_HOTKEY, recordPressed, args=[]);
-keyboard.add_hotkey(SAVE_EXIT_HOTKEY, savePressed, args=[]);
-keyboard.add_hotkey(EXIT_HOTKEY, exitPressed, args=[]);
-keyboard.add_hotkey(PAUSE_HOTKEY, pausePressed, args=[]);
-keyboard.add_hotkey(FASTER_HOTKEY, fasterPressed, args=[]);
-keyboard.add_hotkey(SLOWER_HOTKEY, slowerPressed, args=[]);
 
-# Start classification window
-videoClassifier.start()
+    
+# Main function for command line running
+if __name__ == '__main__':
+    
+    # Count arguments supplied
+    argCount = len(sys.argv)
+    
+    # Make sure at least 2 arguments are supplied
+    if argCount > 2:
+        
+        videoClassifier = None;
+        
+        category = sys.argv[1];
+        model_version = sys.argv[2]
+        
+        # Create new instance of classifier with supplied params
+        # Just category and model supplied
+        if (argCount == 3):
+            videoClassifier = VideoClassifier(category, model_version)
+        elif (argCount == 4):
+            mode = sys.argv[3];
+            videoClassifier = VideoClassifier(category, model_version, mode=mode)
+        elif (argCount == 5):
+            mode = sys.argv[3]
+            state = sys.argv[4]
+            videoClassifier = VideoClassifier(category, model_version, mode=mode, state=state)
+        elif (argCount == 6):
+            mode = sys.argv[3]
+            state = sys.argv[4]
+            interval = sys.argv[5]
+            videoClassifier = VideoClassifier(category, model_version, mode=mode, state=state, interval=interval)
+        else:
+            print("ERROR: Too many options provided");
+            sys.exit();
+
+        # Add keyboard event function on space press
+        keyboard.add_hotkey(TOGGLE_RECORD_HOTKEY, recordPressed, args=[]);
+        keyboard.add_hotkey(SAVE_EXIT_HOTKEY, savePressed, args=[]);
+        keyboard.add_hotkey(EXIT_HOTKEY, exitPressed, args=[]);
+        keyboard.add_hotkey(PAUSE_HOTKEY, pausePressed, args=[]);
+        keyboard.add_hotkey(FASTER_HOTKEY, fasterPressed, args=[]);
+        keyboard.add_hotkey(SLOWER_HOTKEY, slowerPressed, args=[]);
+
+        # Start classification window
+        videoClassifier.start()
+        
+    # Invalid arguments, print usage message
+    else:
+        print("Usage: VideoClassifier.py (category) (model_version) [mode] [state] [interval]")
+        sys.exit()
+    
+    
 
 
 

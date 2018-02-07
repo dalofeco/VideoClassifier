@@ -30,11 +30,19 @@ class ClassifyRequestHandler(BaseHTTPRequestHandler):
 
 # Main
 if __name__ == '__main__':
+    
+    # Make sure exactly one argument is supplied
+    if (len(sys.argv) == 2):
 
-    # Classifier class 
-    classifier = Classifier("../tests/fire.jpg");
+        # Classifier class 
+        classifier = Classifier(sys.argv[1]);
+        classifier.loadImage("../tests/fire.jpg");
 
-    httpd = HTTPServer(("127.0.0.1", 8081), ClassifyRequestHandler);
-    httpd.serve_forever();
+        httpd = HTTPServer(("127.0.0.1", 8081), ClassifyRequestHandler);
+        httpd.serve_forever();
+        
+    else:
+        # Print usage info
+        print("Usage: python3 TensorServer.py (model_number)");
     
     
