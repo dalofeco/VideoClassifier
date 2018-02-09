@@ -59,52 +59,14 @@ class RNNTrainer():
         self.tf_files_dir = '../Models/tf_files-v{0}/'.format(self.modelVersion)
         self.dataset_dir = self.tf_files_dir + 'dataset/rnn/'
         self.features_dir = self.tf_files_dir + 'features/'
+        self.tryCreateDirectory(self.features_dir)
         
         # Save labels to be considered
         self.labels = labels;
         
-    # Prepare data, then train
-    def autoTrain(self):
-        self.extractPoolLayerData(self.labels);
-        self.train();
         
-    # Execute training after rnn dataset is ready
-    def train(self):
-        
-        print("Initiating RNN training...")
-        
-        # Define batch size
-        batch_size = 20
-        
-        # Define number of frames
-        numOfFrames = 100;
-        
-        # Performance metrics
-        start = time.time();
-        
-        # Load training data
-        X_train, X_test, y_train, y_test = self.readFeatures();
-        
-        # Log time elapsed loading training data
-        print("Training data loaded in %d seconds!", time.time() - start)
-        
-        # Get num of categories
-        numOfCategories = len(y_train[0])
-        print("Num of Categories: %d", numOfClasses)
-        
-        # Get our LSTMRNN
-        net = LSTMRNN.getNetwork(numOfClasses, numOfFrames);
-        
-        # Train the model
-        model = tflearn.DNN(net, tensorboard_verbose=0)
-        model.fit(X_train, y_train, validation_set=(X_test, y_test), show_metric=True, batch_size=batch_size, snapshot_step=100, n_epoch=4)
-        
-        # And save it
-        model.save(self.tf_files_dir + 'checkpoints/rnn.tflearn');
-        
-        
-    # Extracts all features from pooling layer of CNN to dataset files for RNN training
-    def extractPoolLayerData(self, labels):
+     # Extracts all features from pooling layer of CNN to dataset files for RNN training
+    def extractPoolLayerData(self):
 
         # Performance monitoring
         loadStart = time.time();
@@ -120,42 +82,51 @@ class RNNTrainer():
                 # Feed the image_data as input to the graph and get pool tensor layer
                 pool_tensor = sess.graph.get_tensor_by_name('pool_3:0')
 
-                print("Loaded tensor in %d seconds", time.time() - loadStart);
+                print("Loaded tensor in %.2f seconds" % (time.time() - loadStart));
                        
                 # Do for all labeled categories
-                for label in labels:
+                for label in self.labels:
+                    
+                    # Generate output folder directory and create folder
+                    output_folder_dir = self.features_dir + label + '/';
+                    self.tryCreateDirectory(output_folder_dir);
+                    
+                    # Get batches within category
+                    batches = os.listdir(self.dataset_dir + label)
                     
                     # Performance monitoring
                     labelStart = time.time();
                     
-                    # Generate output folder directory and create folder
-                    output_folder_dir = self.features_dir + label + '/';
-                    os.mkdir(output_folder_dir);
+                    # Progress bar
+                    pbar = tqdm(total=len(batches))
                     
                     # Do for every batch (frames) within category
-                    for batchName in os.listdir(self.dataset_dir + label):
+                    for batchName in batches:
                     
                         # Performance monitoring
-                        videoStart = time.time();
+                        batchStart = time.time();
 
                         # Load images (frames)
                         frames = [];
-                        imagesDirs = os.listdir(self.dataset_dir + label + '/' + batchName);
+                        imagesDir = self.dataset_dir + label + '/' + batchName + '/'
+                        imageNames = os.listdir(imagesDir);
 
                         # Set pool features output directory
-                        output_dir = ouput_folder_dir + batchName + '.dat';
+                        output_dir = output_folder_dir + batchName + '.dat';
+                        
+                        # Skip files that aleady exists (already processed)
+                        if (os.path.exists(output_dir)):
+                            pbar.update(1)
+                            continue
 
                         # Store all features in sequential array
                         cnn_features = []
 
-                        # Progress bar
-                        pbar = tqdm(total=len(frames))
-
                         # For every image in the video frames directory
-                        for i, imageDir in enumerate(imagesDirs):
+                        for i, imageName in enumerate(imageNames):
 
                             # Load image data
-                            image_data = tf.gfile.FastGFile(imageDir, 'rb').read();
+                            image_data = tf.gfile.FastGFile(imagesDir + imageName, 'rb').read();
 
                             # Run CNN and extract pool tensor representation
                             try:
@@ -171,23 +142,26 @@ class RNNTrainer():
                             frame_data = [cnn_representation, label];
                             cnn_features.append(frame_data);
 
+                                
+                        # Save features of batch to output file
+                        with open(output_dir, 'wb') as featuresOutput:
+                            pickle.dump(cnn_features, featuresOutput);
+                            featuresOutput.close();
 
-                            # Update progress bar
-                            if i > 0 and i % 10 == 0:
-                                pbar.update(10);
-
-                        pbar.close()
+                        # Update progress bar
+                        pbar.update(1);
+                            
+                       
 
                         # Log batch loading time
-                        print(batchName + " processed in %d seconds!" % (time.time() - videoStart));
+                        print(batchName + " processed in %d seconds!" % (time.time() - batchStart));
 
-                        # Open output file for features
-                        with open(output_dir, 'wb') as featuresOutput:
-                            featuresOutput.write(pickle.dump(cnn_features));
-                            featuresOutput.close();
+                    # Close progress bar
+                    pbar.close()
                     
                     # Log label loading time
                     print (label + " processed in %d seconds!" % (time.time() - labelStart))
+                        
                         
     # Get the data from our saved predictions/pooled features
     def readFeatures(self):
@@ -259,15 +233,66 @@ class RNNTrainer():
 
         # Return data
         return X_train, X_test, y_train, y_test
+    
+    
+    # Prepare data, then train
+    def autoTrain(self):
+        self.extractPoolLayerData();
+        self.train();
+        
+    # Execute training after rnn dataset is ready
+    def train(self):
+        
+        print("Initiating RNN training...")
+        
+        # Define batch size
+        batch_size = 20
+        
+        # Define number of frames
+        numOfFrames = 100;
+        
+        # Performance metrics
+        start = time.time();
+        
+        # Load training data
+        X_train, X_test, y_train, y_test = self.readFeatures();
+        
+        # Log time elapsed loading training data
+        print("Training data loaded in %d seconds!", time.time() - start)
+        
+        # Get num of categories
+        numOfCategories = len(y_train[0])
+        print("Num of Categories: %d", numOfClasses)
+        
+        # Get our LSTMRNN
+        net = LSTMRNN.getNetwork(numOfClasses, numOfFrames);
+        
+        # Train the model
+        model = tflearn.DNN(net, tensorboard_verbose=0)
+        model.fit(X_train, y_train, validation_set=(X_test, y_test), show_metric=True, batch_size=batch_size, snapshot_step=100, n_epoch=4)
+        
+        # And save it
+        model.save(self.tf_files_dir + 'checkpoints/rnn.tflearn');
+        
+        
+   
+
+
+    # Attempt to create dir
+    def tryCreateDirectory(self, dir):
+        try:
+            os.mkdir(dir);
+        except FileExistsError:
+            pass
 
 
 # Example RNN training
 
 # Initialize trainer
-# trainer = RNNTrainer(['shooting', 'normal', 'explosion'])
+trainer = RNNTrainer(['shooting', 'normal'], 0.3)
 
 # Extract CNN Pool Layer Data
-# trainer.extractPoolLayerData()
+trainer.extractPoolLayerData()
 
 # Launch training process
 # trainer.train()
