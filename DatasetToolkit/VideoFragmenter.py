@@ -18,12 +18,11 @@ class VideoFragmenter:
         # Define frame interval to consider
         self.interval = 2;
         
-        # Define frames per batch (folder)
-        self.batchFrameLimit = 100;
-        
         # Define directories and create necessary 
         self.tf_files_dir = "../Models/tf_files-v" + str(self.MODEL_VERSION) + "/"
         self.videosDirectory = self.tf_files_dir + "videos/" + category + "/";
+        
+        # Generate and create dataset save directories for cnn and rnn
         self.datasetDirectory = self.tf_files_dir + "dataset/" + self.MODE + "/" + category + "/"
         self.tryCreateDirectory(self.datasetDirectory);
             
@@ -44,37 +43,25 @@ class VideoFragmenter:
         success = True;
         count = 0;
         dirCount = 0;
+        
+        saveDir = self.datasetDirectory;
             
+         # Generate save directory mode with video titled folder for RNN dataset mode
+        if (self.MODE == 'rnn'):
+            saveDir = saveDir + videoName[:-4] + '/'
+        self.tryCreateDirectory(saveDir)
+            
+        # Loop through all frames
         while (cap.isOpened() and success):
 
             # Read next frame
             success, image = cap.read();
-            
-            saveDirectory = "";
-            
-            # Generate save directory for CNN mode
-            if (self.MODE == 'cnn'):
-                saveDirectory = self.datasetDirectory;
-            
-            elif (self.MODE == 'rnn'):
                 
-                # Generate next save directory for every X amount of frames on RNN mode
-                if (count % (self.batchFrameLimit * self.interval) == 0):
-                    dirCount += 1;
-                    
-                # Generate save directory for RNN mode with video titled folder
-                saveDirectory = self.datasetDirectory + videoName[:-4] + "-" + str(dirCount) + "/"
-                self.tryCreateDirectory(saveDirectory)
-                
-            else:
-                print("ERROR: MODE not recognized!")
-                sys.exit();
-
-            # Wait for defined interval
+            # Wait for defined frame interval
             if (count % self.interval == 0):
 
-                # Write out onto frame%d.jpg
-                cv2.imwrite(saveDirectory + videoName[:-4] + "-%d.jpg" % (count/self.interval), image);
+                # Write out the image
+                cv2.imwrite(saveDir + videoName[:-4] + "-%d.jpg" % (count/self.interval), image);
 
             #Break if esc?
             if (cv2.waitKey(1) == 27):
