@@ -309,8 +309,7 @@ class RNNTrainer():
 
 # Initialize trainer
 # trainer = RNNTrainer(['shooting', 'normal'], 0.3)
-trainer = RNNTrainer(['shooting'], 0.3)
-
+trainer = RNNTrainer(['normal', 'shooting'], 0.3)
 print(trainer.readFeatures())
 # Extract CNN Pool Layer Data
 # trainer.extractPoolLayerData()
