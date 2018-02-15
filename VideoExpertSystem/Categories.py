@@ -1,19 +1,23 @@
-class Categories():
-    def __init__(self):
-        self.NORMAL = 0;
-        self.SHOOTING = 1;
-        self.ROBBERY = 2;
-        self.EXPLOSION = 3;
-        self.FIGHTING = 4;
-        
-    def labelToNum(self, label):
-        if label == 'normal':
-            return self.NORMAL;
-        if label == 'shooting':
-            return self.SHOOTING
-        if label == 'robbery':
-            return self.ROBBERY
-        if label == 'explosion':
-            return self.EXPLOSION
-        if label == 'fighting':
-            return self.FIGHTING
+import sys
+
+NORMAL = 0;
+SHOOTING = 1;
+ROBBERY = 2;
+EXPLOSION = 3;
+FIGHTING = 4;
+
+def labelToNum(label):
+    if label == 'normal':
+        return NORMAL;
+    if label == 'shooting':
+        return SHOOTING
+    if label == 'robbery':
+        return ROBBERY
+    if label == 'explosion':
+        return EXPLOSION
+    if label == 'fighting':
+        return FIGHTING
+    else:
+        print("ILLEGAL LABEL!")
+        print(label)
+        sys.exit();

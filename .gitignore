@@ -8,6 +8,7 @@
 *tf_files*
 */videos/*
 */dataset/*
+VideoCache
 
 tests
 tensorflow

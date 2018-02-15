@@ -6,7 +6,7 @@ import time
 
 class Classifier():
 	
-    def __init__(self, imagePath, modelVersion):    
+    def __init__(self, modelVersion):    
         # Performance monitoring
         start = time.time();
         

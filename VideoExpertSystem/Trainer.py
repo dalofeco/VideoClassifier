@@ -4,6 +4,7 @@ from sklearn.model_selection import train_test_split
 from tflearn.data_utils import to_categorical
 import tflearn
 import numpy as np
+from collections import deque
 
 import time
 import os, sys, pickle
@@ -52,6 +53,10 @@ class RNNTrainer():
 
     def __init__(self, labels, modelVersion):
         
+        # Number of frames to consider at once
+        self.FRAME_BATCH_LENGTH = 30
+
+        
         # Define model version to use (tf_files-v[0.3])
         self.modelVersion = modelVersion
         
@@ -91,29 +96,26 @@ class RNNTrainer():
                     output_folder_dir = self.features_dir + label + '/';
                     self.tryCreateDirectory(output_folder_dir);
                     
-                    # Get batches within category
-                    batches = os.listdir(self.dataset_dir + label)
+                    # Get videos within category
+                    videos = os.listdir(self.dataset_dir + label)
                     
                     # Performance monitoring
                     labelStart = time.time();
                     
                     # Progress bar
-                    pbar = tqdm(total=len(batches))
-                    
-                    # Do for every batch (frames) within category
-                    for batchName in batches:
-                    
-                        # Performance monitoring
-                        batchStart = time.time();
+                    pbar = tqdm(total=len(videos))
 
+                    # For each video
+                    for video in videos:
+                    
                         # Load images (frames)
                         frames = [];
-                        imagesDir = self.dataset_dir + label + '/' + batchName + '/'
+                        imagesDir = self.dataset_dir + label + '/' + video + '/'
                         imageNames = os.listdir(imagesDir);
 
-                        # Set pool features output directory
-                        output_dir = output_folder_dir + batchName + '.dat';
-                        
+                        # Set pool features output directory to video name
+                        output_dir = output_folder_dir + video + '.dat';
+
                         # Skip files that aleady exists (already processed)
                         if (os.path.exists(output_dir)):
                             pbar.update(1)
@@ -126,7 +128,7 @@ class RNNTrainer():
                         for i, imageName in enumerate(imageNames):
 
                             # Load image data
-                            image_data = tf.gfile.FastGFile(imagesDir + imageName, 'rb').read();
+                            image_data = tf.gfile.FastGFile(imagesDir + imageName, 'rb').read()
 
                             # Run CNN and extract pool tensor representation
                             try:
@@ -142,7 +144,7 @@ class RNNTrainer():
                             frame_data = [cnn_representation, label];
                             cnn_features.append(frame_data);
 
-                                
+
                         # Save features of batch to output file
                         with open(output_dir, 'wb') as featuresOutput:
                             pickle.dump(cnn_features, featuresOutput);
@@ -150,11 +152,6 @@ class RNNTrainer():
 
                         # Update progress bar
                         pbar.update(1);
-                            
-                       
-
-                        # Log batch loading time
-                        print(batchName + " processed in %d seconds!" % (time.time() - batchStart));
 
                     # Close progress bar
                     pbar.close()
@@ -165,65 +162,87 @@ class RNNTrainer():
                         
     # Get the data from our saved predictions/pooled features
     def readFeatures(self):
-    
+        
+        # Performance metrics
         start = time.time();
 
-        # Local vars.
+        # X and y for dataset
         X = []
         y = []
-        temp_list = []
 
+        # Initialize featuresDeque for serving as frame features buffer
+        featuresDeque = deque()
+        
         # Initiate num of categories to 0
         num_categories = 0
 
         # Iterate through all category folders
         categories = os.listdir(self.features_dir)
-        for category in categories:
+        for category in self.labels:
 
             # Count num of categories
             num_categories += 1;
 
-            batchFeatures = os.listdir(category);
+            # List video features files
+            videosFeatures = os.listdir(self.features_dir + '/' + category);
+            
+            # Progress bar and start time for performance metrics
+            pbar = tqdm(total=len(videosFeatures))
+            startTime = time.time()
 
             # For each feature in the video batch
-            for batchFeatures in batchFeatures:
+            for videoFeatures in videosFeatures:
 
+                # Define full path for video features
+                videoFeaturesPath = self.features_dir + '/' + category + '/' + videoFeatures
+                
                 # Declaration for scoping reasons
                 actualLabel = "";
 
                 # Open and get the features.
-                with open(batchFeatures, 'rb') as fin:
-                    frames = pickle.load(fin)
+                with open(videoFeaturesPath, 'rb') as fin:
+                    frameFeatures = pickle.load(fin)
 
                     # Enumerate and iterate through frames
-                    for i, frame in enumerate(frames):
-                        features = frame[0]
+                    for i, frame in enumerate(frameFeatures):
+                        cnnFeatures = frame[0]
                         actualLabel = frame[1]
+                        
+                        # If deque of size of batch length, start adding to X and Y
+                        if (len(featuresDeque) == self.FRAME_BATCH_LENGTH - 1):
+                            featuresDeque.append(cnnFeatures)
+                            X.append(np.array(list(featuresDeque)))
+                            y.append(Categories.labelToNum(actualLabel))
+                            featuresDeque.popleft()
+                        else:
+                            # Add to the deque
+                            featuresDeque.append(cnnFeatures)
+                            
+                # Update progress bar
+                pbar.update(1)
 
-                        # Add to the queue
-                        temp_list.append(features)
-
-            # Convert our labels into binary.
-            labelNum = Categories.labelToNumber(actualLabel);
-
-            # Flatten list, and append to X and Y datasets
-            flat = list(temp_list)
-            X.append(np.array(flat))
-            y.append(labelNum)
-
-
+            # Close progress bar and print category done message 
+            pbar.close()
+            
+            # Calculate time for performance metrics
+            timeElapsed = time.time() - startTime
+            print(category + " finished in {:.0f}:{:.0f}:{:.0f}.".format((timeElapsed%24*3600)/3600, (timeElapsed%3600)/60, timeElapsed%60))
+            
         # Print size of dataset
-        print("Total dataset size: %d" % len(X))
+        print("Total dataset size: {}".format(len(X)))
 
         # Convert to Numpy arrays
         X = np.array(X)
         y = np.array(y)
 
         # Reshape 
-        X = X.reshape(-1, num_frames, input_length)
+        X = X.reshape(-1, self.FRAME_BATCH_LENGTH, len(X))
+        
+        print(X)
+        print(y)
 
         # One-hot encoded categoricals.
-        y = to_categorical(y, num_classes)
+        y = to_categorical(y, num_categories)
 
         # Split into train and test.
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=42)
@@ -289,10 +308,11 @@ class RNNTrainer():
 # Example RNN training
 
 # Initialize trainer
-trainer = RNNTrainer(['shooting', 'normal'], 0.3)
-
+# trainer = RNNTrainer(['shooting', 'normal'], 0.3)
+trainer = RNNTrainer(['normal', 'shooting'], 0.3)
+print(trainer.readFeatures())
 # Extract CNN Pool Layer Data
-trainer.extractPoolLayerData()
+# trainer.extractPoolLayerData()
 
 # Launch training process
 # trainer.train()
