@@ -2,15 +2,23 @@ from http.server import BaseHTTPRequestHandler
 from http.server import HTTPServer
 from Classifier import Classifier
 
-import json
-         
+import sys, json
+from urllib.parse import urlparse
+
 class ClassifyRequestHandler(BaseHTTPRequestHandler):
                 
     # Respond to GET requests
     def do_GET(self):
-        if self.path == '/classify':
+        print('GET Request')
+
+        query = urlparse(self.path).query
+        query_components = dict(qc.split("=") for qc in query.split("&"))
+        imagePath = query_components["image"]
+
+        if (imagePath):#self.path == '/classify':
             # Log request and increase counter
-            print('GET Request')
+            
+            classifier.loadImage(imagePath);
             
             # Get classification
             result = classifier.classifyCNN();
@@ -18,8 +26,25 @@ class ClassifyRequestHandler(BaseHTTPRequestHandler):
             # Log result
             print(result);
             
+            # Calculate top category
+            topCategory = ""
+            highestVal = 0
+            
+            
+            resultData = None
+            
+            # Iterate through results, save highest score with its category
+            if (result['shooting'] > result['normal']):
+                resultData = {'shooting': result['shooting']};
+            else:
+                resultData = {"normal": result['normal']};
+                
+            
             # Convert to byte-like type
-            resultData = json.dumps(result);
+            resultData = json.dumps(resultData);
+            
+                    
+            #resultString = topCategory + ": {}%".format(highestVal)
             
             # Send response with result
             self.send_response(200);
