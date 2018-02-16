@@ -10,5 +10,7 @@
 */dataset/*
 VideoCache
 
+.vscode
+
 tests
 tensorflow

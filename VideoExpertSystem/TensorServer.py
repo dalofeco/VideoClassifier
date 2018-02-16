@@ -9,43 +9,56 @@ class ClassifyRequestHandler(BaseHTTPRequestHandler):
                 
     # Respond to GET requests
     def do_GET(self):
-        print('GET Request')
-
+        
+        # If path is null for some reason, exi
+        if (!self.path):
+            print("Path is null...")
+            sys.exit()
+        
+        # If GET request is for classification, call function
+        if (self.path[0:8] == "/classify"):
+            self.handleClassifyRequest()
+    
+    # Function for handling classification request
+    def handleClassifyRequest(self):
+        
+        # Get the query and parse its components
         query = urlparse(self.path).query
         query_components = dict(qc.split("=") for qc in query.split("&"))
+        
+        # Get the image path query
         imagePath = query_components["image"]
 
-        if (imagePath):#self.path == '/classify':
-            # Log request and increase counter
+        # Make sure the path was specified as a query
+        if (imagePath):
             
+            # Load the specified image in the classifier
             classifier.loadImage(imagePath);
-            
+
             # Get classification
             result = classifier.classifyCNN();
-            
+
             # Log result
             print(result);
-            
+
             # Calculate top category
             topCategory = ""
             highestVal = 0
-            
-            
-            resultData = None
-            
+
+
             # Iterate through results, save highest score with its category
-            if (result['shooting'] > result['normal']):
-                resultData = {'shooting': result['shooting']};
-            else:
-                resultData = {"normal": result['normal']};
-                
+            for (key, val in result):
+                if (highestVal < val):
+                    highestVal = val
+                    topCategory = key
             
-            # Convert to byte-like type
+
+            # Organize result data
+            resultData = {topCategory: highestVal}
+
+            # Convert to byte-like type for sending
             resultData = json.dumps(resultData);
-            
-                    
-            #resultString = topCategory + ": {}%".format(highestVal)
-            
+
             # Send response with result
             self.send_response(200);
             self.send_header("Content-Type", "application/json")
@@ -61,8 +74,8 @@ if __name__ == '__main__':
 
         # Classifier class 
         classifier = Classifier(sys.argv[1]);
-        classifier.loadImage("../tests/fire.jpg");
 
+        # Server http server on defined address and port, with specified request handler
         httpd = HTTPServer(("127.0.0.1", 8081), ClassifyRequestHandler);
         httpd.serve_forever();
         

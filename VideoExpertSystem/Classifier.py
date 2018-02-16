@@ -6,7 +6,8 @@ import time
 
 class Classifier():
 	
-    def __init__(self, modelVersion):    
+    def __init__(self, modelVersion):
+        
         # Performance monitoring
         start = time.time();
         
@@ -15,21 +16,21 @@ class Classifier():
         
         # Initialize image data to None
         self.image_data = None;
-    
-        # Load image into class variable
-        # self.loadImage(imagePath);
         
         # Counter for logging purposes
         self.count = 0;
         
         # Use the model version directory
-        tf_files_dir = "../Models/tf_files-v%s" % self.modelVersion
+        self.tf_files_dir = "../Models/tf_files-v%s" % self.modelVersion
+        
 
+    # Load the model into class variables
+    def loadModel(self):
         # Loads label file, strips off carriage return
-        self.label_lines = [line.rstrip() for line in tf.gfile.GFile(tf_files_dir + "/retrained_labels.txt")]
+        self.label_lines = [line.rstrip() for line in tf.gfile.GFile(self.tf_files_dir + "/retrained_labels.txt")]
 
         # Unpersists graph from file
-        with tf.gfile.FastGFile(tf_files_dir + "/retrained_graph.pb", 'rb') as f:
+        with tf.gfile.FastGFile(self.tf_files_dir + "/retrained_graph.pb", 'rb') as f:
             self.graph_def = tf.GraphDef()
             self.graph_def.ParseFromString(f.read())
             self._ = tf.import_graph_def(self.graph_def, name='')
@@ -41,12 +42,14 @@ class Classifier():
 
                 # Log loading time
                 print("Loaded Model v" + str(self.modelVersion) + " in %.2f seconds!" % (time.time() - start));
-
             
+    # Load a specific image into the classifier
     def loadImage(self, image_path):
         # read in the image_data
         self.image_data = tf.gfile.FastGFile(image_path, 'rb').read();
     
+    
+    # Classifies images using the CNN model
     def classifyCNN(self, image_data=None):
         
         # If no image data was supplied
