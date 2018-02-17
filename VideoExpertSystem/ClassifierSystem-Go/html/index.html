@@ -1,0 +1,62 @@
+<html>
+    <head>   
+        <script src="/js/utils/jquery-3.3.1.min.js"></script>
+        <script src="/js/classifier.js"></script>
+        <link rel="stylesheet" type="text/css" href="css/index.css">
+
+    </head>
+        
+    <script>
+
+        var STREAMING = false
+        
+        // ------------ DOCUMENT READY SCRIPT --------------
+        
+        // On document load
+        $(document).ready(function() {
+            
+            // Define file picker handlers
+            $('#videoFilePicker').change(selectFile)
+            
+            // Define video player handler
+            $('#videoPlayer').on('loadedmetadata', function() {
+                if ('function' === typeof duration) {
+                    duration = duration(this.duration)
+                    this.currentTime = Math.min(Math.max(0, (duration < 0 ? this.duration : 0) + duration), this.duration)
+                }
+
+            });
+            
+            // Define classify button handler to start active analysis
+            $("#classifyButton").click(toggleStreaming);
+        });
+
+        function toggleStreaming() {
+            if (STREAMING) {
+                STREAMING = false
+                stopVideoAnalysis()
+            } else {
+                STREAMING = true
+                startVideoAnalysis()
+            }
+            return STREAMING
+        }
+        
+    </script>
+    
+    <div id="mainDiv">
+        <video controls muted autoplay id="videoPlayer"></video>
+
+        <p> 
+            Classify a video! <button id="classifyButton">Classify!</button>
+        </p>
+        <p id="results"> </p>
+            
+        </form>
+        <input type="file" accept="video/*" id="videoFilePicker">
+    
+    </div>
+    
+
+</html>
+
