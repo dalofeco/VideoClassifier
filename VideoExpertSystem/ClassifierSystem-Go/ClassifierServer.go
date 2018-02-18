@@ -15,7 +15,7 @@ func init() {
 }
 
 // Define time interval in seconds to request new frame from client
-const TICKER_INTERVAL float32 = 1.0
+const TICKER_INTERVAL float32 = 0.5
 
 type ClassifierServer struct {
 	classifier              *Classifier

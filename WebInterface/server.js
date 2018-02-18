@@ -100,7 +100,7 @@ io.of('/stream').on('connection', function(socket) {
         // Define classify function when stream ends
         stream.on('end', function() {
             console.log("Recieved: " + data.name)
-            classifyImage(CLIENT_VIDEO_CACHE_DIR + data.name + '.jpg', socket)
+            classifyImage(data.name + '.jpg', socket)
         });
         
         // Create path name
@@ -120,27 +120,42 @@ io.of('/stream').on('connection', function(socket) {
 })
 
 
-// Function to classify image path and send socket response
-var classifyImage = function(imagePath, socket) {
+// Function to classify image and send socket response
+var classifyImage = function(imageName, socket) {
     // To time the process, record current time
     var start = performance.now()
-    
-    // Get classification data from Python classifier server
-    client.get("http://localhost:8081/classify?image=" + imagePath, function(data, response) {
-        
-        // Print out the recieved data
-        console.log(data);
-        
-        // Log the elapsed milliseconds
-        var duration = performance.now() - start;
-        console.log(duration.toString() + ' milliseconds');
-        
-        // Send back data
-        socket.emit('results', data);
-        
-        // Delete the image file
-        fs.unlink(imagePath)
-    });
+
+    var imagePath = CLIENT_VIDEO_CACHE_DIR + imageName
+
+    try {
+        // Get classification data from classifier server
+        client.get("http://localhost:8081/classify?image=" + imageName, function(data, response) {
+            
+            // Print out the recieved data
+            console.log(data);
+            
+            // Log the elapsed milliseconds
+            var duration = performance.now() - start;
+            console.log(duration.toString() + ' milliseconds');
+            
+
+            try {
+                // Send back data
+                socket.emit('results', data);
+            } catch (err) {
+                console.log(err)
+            }
+            
+            // Delete the image file
+            fs.unlink(imagePath, function(err) {
+                if (err)
+                    console.log(err)
+            })
+        });
+
+    } catch (err) {
+        console.log(err);
+    }
 }
 
 

@@ -5,6 +5,40 @@ var ws = null
 const interval = 3;
 var frameCount = 0;
 
+var STREAMING = false
+        
+// ------------ DOCUMENT READY SCRIPT --------------
+
+// On document load
+$(document).ready(function() {
+    
+    // Define file picker handlers
+    $('#videoFilePicker').change(selectFile)
+    
+    // Define video player handler
+    $('#videoPlayer').on('loadedmetadata', function() {
+        if ('function' === typeof duration) {
+            duration = duration(this.duration)
+            this.currentTime = Math.min(Math.max(0, (duration < 0 ? this.duration : 0) + duration), this.duration)
+        }
+
+    });
+    
+    // Define classify button handler to start active analysis
+    $("#classifyButton").click(toggleStreaming);
+});
+
+function toggleStreaming() {
+    if (STREAMING) {
+        STREAMING = false
+        stopVideoAnalysis()
+    } else {
+        STREAMING = true
+        startVideoAnalysis()
+    }
+    return STREAMING
+}
+
 // ---------------- WEB SOCKET -----------------
 
 function initWebSocket() {
@@ -108,17 +142,16 @@ function startVideoAnalysis() {
         //     console.log(event)
         // }
     }
+}
 
-    function stopVideoAnalysis() {
+function stopVideoAnalysis() {
 
-        // Pause video if not already paused
-        if (!document.getElementById('videoPlayer').paused)
-            $("#videoPlayer").trigger("pause");
-    
-        ws.close()
-    
-        ws = nil
-    }
+    // Pause video if not already paused
+    if (!document.getElementById('videoPlayer').paused)
+        $("#videoPlayer").trigger("pause");
+
+    ws.close()
+    ws = null
 }
 
 // Function to classify the frame currently played on videoPlayer
