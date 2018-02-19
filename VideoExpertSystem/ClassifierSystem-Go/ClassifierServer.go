@@ -14,8 +14,8 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-// Define time interval in seconds to request new frame from client
-const TICKER_INTERVAL float32 = 0.5
+// Define time interval in milliseconds to request new frame from client
+const TICKER_INTERVAL int = 500
 
 type ClassifierServer struct {
 	classifier              *Classifier
@@ -42,11 +42,17 @@ func NewClassifierServer() *ClassifierServer {
 	return &classifierServer
 }
 
+// Generates a new client ID
 func (cs *ClassifierServer) generateClientID() string {
 
+	// Define length and allowed characters
 	var idLength = 20
 	var characters = []rune("1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+	// Form placeholder of defined lenght
 	b := make([]rune, idLength)
+
+	// Randomly fill the ID characters
 	for i := range b {
 		b[i] = characters[rand.Intn(len(characters))]
 	}
@@ -62,6 +68,42 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
+// Binds socket to active classification server
+func (cs *ClassifierServer) bindSocket(w http.ResponseWriter, req *http.Request) {
+
+	conn, err := upgrader.Upgrade(w, req, nil)
+	if err != nil {
+		log.Println("Couldn't upgrade to websocket")
+		log.Println(err)
+		return
+	}
+
+	// Generate new client ID
+	newClientID := cs.generateClientID()
+
+	// Check if there is at least one collection
+	if len(cs.clientSocketConnections) > 0 {
+		if _, ok := cs.clientSocketConnections[newClientID]; ok {
+			// If ok, client ID already exists
+			log.Fatal("Whoah. Key repeated.")
+			return
+
+		} else {
+			// Save websocket conn object with client id and append to client queue
+			cs.clientSocketConnections[newClientID] = conn
+			cs.clientQueue = append(cs.clientQueue, newClientID)
+			// Let the timed queue handler handle the queue
+		}
+	} else {
+
+		// Save websocket conn object with client id and append to client queue
+		cs.clientSocketConnections[newClientID] = conn
+		cs.clientQueue = append(cs.clientQueue, newClientID)
+		// Let the timed queue handler handle the queue
+	}
+}
+
+// Unbinds the socket connection correctly
 func (cs *ClassifierServer) unbindSocket(clientID string) {
 
 	// Make sure client id has a registered socket
@@ -100,47 +142,14 @@ func (cs *ClassifierServer) unbindSocket(clientID string) {
 
 }
 
-// Binds socket to active classification server
-func (cs *ClassifierServer) bindSocket(w http.ResponseWriter, req *http.Request) {
-
-	conn, err := upgrader.Upgrade(w, req, nil)
-	if err != nil {
-		log.Println("Couldn't upgrade to websocket")
-		log.Println(err)
-		return
-	}
-
-	// Generate new client ID
-	newClientID := cs.generateClientID()
-
-	// Check if there is at least one collection
-	if len(cs.clientSocketConnections) > 0 {
-		if _, ok := cs.clientSocketConnections[newClientID]; ok {
-			// If ok, client ID already exists
-			log.Fatal("Whoah. Key repeated.")
-			return
-
-		} else {
-			// Save websocket conn object with client id and append to client queue
-			cs.clientSocketConnections[newClientID] = conn
-			cs.clientQueue = append(cs.clientQueue, newClientID)
-			// Let the timed queue handler handle the queue
-		}
-	} else {
-
-		// Save websocket conn object with client id and append to client queue
-		cs.clientSocketConnections[newClientID] = conn
-		cs.clientQueue = append(cs.clientQueue, newClientID)
-		// Let the timed queue handler handle the queue
-	}
-}
-
 // Handles socket requests for classifying a specified image
+// NOTE: Call with a new goroutine
 func (cs *ClassifierServer) handleRegisteredClients() {
 
-	// Create a ticker channel every X seconds
-	ch := time.Tick(time.Duration(TICKER_INTERVAL) * time.Second)
+	// Create a ticker channel every X milliseconds
+	ch := time.Tick(time.Duration(TICKER_INTERVAL) * time.Millisecond)
 
+	// Every X amount of time...
 	for range ch {
 		if len(cs.clientQueue) == 0 {
 			log.Print("No active users...")

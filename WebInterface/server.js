@@ -122,6 +122,7 @@ io.of('/stream').on('connection', function(socket) {
 
 // Function to classify image and send socket response
 var classifyImage = function(imageName, socket) {
+
     // To time the process, record current time
     var start = performance.now()
 

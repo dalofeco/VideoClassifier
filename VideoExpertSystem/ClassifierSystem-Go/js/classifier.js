@@ -21,7 +21,6 @@ $(document).ready(function() {
             duration = duration(this.duration)
             this.currentTime = Math.min(Math.max(0, (duration < 0 ? this.duration : 0) + duration), this.duration)
         }
-
     });
     
     // Define classify button handler to start active analysis
@@ -42,7 +41,22 @@ function toggleStreaming() {
 // ---------------- WEB SOCKET -----------------
 
 function initWebSocket() {
-    handleSocketClosed
+    // Initialize web socket
+    ws = new WebSocket("ws://" + document.location.host + "/ws/bind")
+    
+    // Define function for when socket closes
+    ws.onclose = function(e) {
+        console.log("Socket Closed...")
+        console.log(e)
+    };
+
+    // Define handler for open event
+    ws.onopen = function(e) {
+        console.log("Socket Opened...")
+        console.log(e)
+    }
+
+    return ws
 }
 
 // function handleWebSocketMessage(messageEvent) {
@@ -105,25 +119,12 @@ function startVideoAnalysis() {
 
     // Make sure video is not paused
     if (document.getElementById('videoPlayer').paused)
-        $("#videoPlayer").trigger("play");
+        $("#videoPlayer").trigger("play")
 
+    // Initialize web socket connection
+    ws = initWebSocket()
 
-    // Initialize web socket
-    ws = new WebSocket("ws://" + document.location.host + "/ws/bind")
-    
-    // Define function for when socket closes
-    ws.onclose = function(e) {
-        console.log("Socket Closed...")
-        console.log(e)
-    };
-
-    // Define handler for open event
-    ws.onopen = function(e) {
-        console.log("Socket Opened...")
-        console.log(e)
-    }
-
-    // Send ready message and listen for response
+    // When message recieved, send FRAME response
     ws.onmessage = function(event) {
 
         // Get and parse data

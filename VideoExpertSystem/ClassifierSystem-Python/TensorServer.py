@@ -5,19 +5,25 @@ from Classifier import Classifier
 import sys, json
 from urllib.parse import urlparse
 
+VIDEO_CACHE_DIR = "../VideoCache/"
+
 class ClassifyRequestHandler(BaseHTTPRequestHandler):
                 
     # Respond to GET requests
     def do_GET(self):
+        print("GOT request: " + self.path)
         
         # If path is null for some reason, exi
-        if (!self.path):
+        if (not self.path):
             print("Path is null...")
             sys.exit()
         
         # If GET request is for classification, call function
-        if (self.path[0:8] == "/classify"):
+        if (self.path[0:9] == "/classify"):
             self.handleClassifyRequest()
+        else:
+
+            print("Unrecognized GET request")
     
     # Function for handling classification request
     def handleClassifyRequest(self):
@@ -28,28 +34,32 @@ class ClassifyRequestHandler(BaseHTTPRequestHandler):
         
         # Get the image path query
         imagePath = query_components["image"]
+        imagePath = imagePath.replace("%20", " ")
+
+        # Logging 
+        print("Handle request for image: " + imagePath)
+
 
         # Make sure the path was specified as a query
         if (imagePath):
             
             # Load the specified image in the classifier
-            classifier.loadImage(imagePath);
+            classifier.loadImage(VIDEO_CACHE_DIR + imagePath)
 
             # Get classification
-            result = classifier.classifyCNN();
+            result = classifier.classifyCNN()
 
             # Log result
-            print(result);
+            print(result)
 
             # Calculate top category
             topCategory = ""
             highestVal = 0
 
-
             # Iterate through results, save highest score with its category
-            for (key, val in result):
-                if (highestVal < val):
-                    highestVal = val
+            for key in result:
+                if (highestVal < int(result[key])):
+                    highestVal = int(result[key])
                     topCategory = key
             
 
@@ -68,6 +78,8 @@ class ClassifyRequestHandler(BaseHTTPRequestHandler):
 
 # Main
 if __name__ == '__main__':
+
+    PORT_NUMBER = 8081
     
     # Make sure exactly one argument is supplied
     if (len(sys.argv) == 2):
@@ -75,9 +87,12 @@ if __name__ == '__main__':
         # Classifier class 
         classifier = Classifier(sys.argv[1]);
 
+        print("Started server listening on port ", PORT_NUMBER);
+
         # Server http server on defined address and port, with specified request handler
-        httpd = HTTPServer(("127.0.0.1", 8081), ClassifyRequestHandler);
+        httpd = HTTPServer(("127.0.0.1", PORT_NUMBER), ClassifyRequestHandler);
         httpd.serve_forever();
+
         
     else:
         # Print usage info
