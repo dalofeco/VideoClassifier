@@ -1,6 +1,6 @@
 var videoFileName = '';
 var duration = 0;
-const interval = 3;
+const interval = 1;
 var count = 0;
 
 

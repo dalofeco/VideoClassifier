@@ -5,7 +5,7 @@ from Classifier import Classifier
 import sys, json
 from urllib.parse import urlparse
 
-VIDEO_CACHE_DIR = "../VideoCache/"
+VIDEO_CACHE_DIR = "../../VideoCache/"
 
 class ClassifyRequestHandler(BaseHTTPRequestHandler):
                 
