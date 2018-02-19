@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"time"
 
 	tf "github.com/tensorflow/tensorflow/tensorflow/go"
 	op "github.com/tensorflow/tensorflow/tensorflow/go/op"
@@ -18,6 +19,8 @@ type Classifier struct {
 }
 
 func NewClassifier() *Classifier {
+
+	start := time.Now()
 
 	var c Classifier
 
@@ -33,6 +36,8 @@ func NewClassifier() *Classifier {
 	}
 
 	c.session = session
+
+	log.Printf("Loaded Classifier in %.2f seconds!", time.Since(start).Seconds())
 
 	return &c
 

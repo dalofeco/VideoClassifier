@@ -1,6 +1,8 @@
 package main
 
 import (
+	"io"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"net/http"
@@ -18,10 +20,7 @@ func init() {
 const TICKER_INTERVAL int = 500
 
 type ClassifierServer struct {
-	classifier              *Classifier
-	clientSocketConnections map[string]*websocket.Conn
-	activeClientIndex       string
-	clientQueue             []string
+	classifier *Classifier
 }
 
 // Create a new server instance
@@ -33,33 +32,12 @@ func NewClassifierServer() *ClassifierServer {
 	// Create new classifier with loaded model
 	classifierServer.classifier = NewClassifier()
 
-	// Create client socket connections
-	classifierServer.clientSocketConnections = make(map[string]*websocket.Conn)
-
-	// Start handling regsitered clients
-	go classifierServer.handleRegisteredClients()
-
 	return &classifierServer
 }
 
-// Generates a new client ID
-func (cs *ClassifierServer) generateClientID() string {
-
-	// Define length and allowed characters
-	var idLength = 20
-	var characters = []rune("1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-
-	// Form placeholder of defined lenght
-	b := make([]rune, idLength)
-
-	// Randomly fill the ID characters
-	for i := range b {
-		b[i] = characters[rand.Intn(len(characters))]
-	}
-
-	return string(b)
-
-}
+// –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––– \\
+// –––––––––––––––––––––– SOCKET HELPERS –––––––––––––––––––––– \\
+// –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––– \\
 
 // Web socket upgrader for handler below
 var upgrader = websocket.Upgrader{
@@ -78,140 +56,51 @@ func (cs *ClassifierServer) bindSocket(w http.ResponseWriter, req *http.Request)
 		return
 	}
 
-	// Generate new client ID
-	newClientID := cs.generateClientID()
-
-	// Check if there is at least one collection
-	if len(cs.clientSocketConnections) > 0 {
-		if _, ok := cs.clientSocketConnections[newClientID]; ok {
-			// If ok, client ID already exists
-			log.Fatal("Whoah. Key repeated.")
-			return
-
-		} else {
-			// Save websocket conn object with client id and append to client queue
-			cs.clientSocketConnections[newClientID] = conn
-			cs.clientQueue = append(cs.clientQueue, newClientID)
-			// Let the timed queue handler handle the queue
-		}
-	} else {
-
-		// Save websocket conn object with client id and append to client queue
-		cs.clientSocketConnections[newClientID] = conn
-		cs.clientQueue = append(cs.clientQueue, newClientID)
-		// Let the timed queue handler handle the queue
-	}
+	_ = NewChannel(conn)
+	log.Println("Started new client channel!")
 }
 
-// Unbinds the socket connection correctly
-func (cs *ClassifierServer) unbindSocket(clientID string) {
+////////// MAIN
+//
+//
+//
+//
+// MAIN STUFFS BELOW WARNING
 
-	// Make sure client id has a registered socket
-	if val, ok := cs.clientSocketConnections[clientID]; ok {
+func serveIndexPage(w http.ResponseWriter, req *http.Request) {
 
-		err := val.Close()
-		if err != nil {
-			log.Print("Error closing connection when unbinding socket for client: ", clientID)
-			log.Print(err)
-		}
-
-		// Delete the entry in socket connections map
-		delete(cs.clientSocketConnections, clientID)
-
+	pageLocation := "html/index.html"
+	pageData, err := ioutil.ReadFile(pageLocation)
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	clientIndex := -1
-
-	// Find index of ClientID from queue if present
-	for i, val := range cs.clientQueue {
-		if val == clientID {
-			clientIndex = i
-			break
-		}
-	}
-
-	// Client ID was found
-	if clientIndex != -1 {
-		// Eliminate it with splice
-		cs.clientQueue = append(cs.clientQueue[:clientIndex], cs.clientQueue[clientIndex+1:]...)
-
-		// Client ID not found
-	} else {
-		log.Print("ClientQueue had no record of Client ID: ", clientID)
-	}
-
+	io.WriteString(w, string(pageData))
 }
 
-// Handles socket requests for classifying a specified image
-// NOTE: Call with a new goroutine
-func (cs *ClassifierServer) handleRegisteredClients() {
+// Main function
+func main() {
 
-	// Create a ticker channel every X milliseconds
-	ch := time.Tick(time.Duration(TICKER_INTERVAL) * time.Millisecond)
+	// Create an initialized and loaded classifier server
+	var classifierServer *ClassifierServer = NewClassifierServer()
 
-	// Every X amount of time...
-	for range ch {
-		if len(cs.clientQueue) == 0 {
-			log.Print("No active users...")
-			continue
-		}
+	// Serving static files (js/css)
+	jsFs := http.FileServer(http.Dir("js"))
+	cssFs := http.FileServer(http.Dir("css"))
 
-		// Performance metrics
-		startTime := time.Now()
+	// Handlers for static files
+	http.Handle("/js/", http.StripPrefix("/js/", jsFs))
+	http.Handle("/css/", http.StripPrefix("/css/", cssFs))
 
-		// Get next client ID to serve
-		nextClientID := cs.clientQueue[0]
+	// Handlers for html pages
+	http.HandleFunc("/", serveIndexPage)
 
-		// Remove top element of queue and add to end
-		cs.clientQueue = cs.clientQueue[1:]
-		cs.clientQueue = append(cs.clientQueue, nextClientID)
+	// Socket handlers
+	http.HandleFunc("/ws/bind", classifierServer.bindSocket)
 
-		// If client id is in client socket connections pool
-		if val, ok := cs.clientSocketConnections[nextClientID]; ok {
+	// Server HTTP server on specified port, without a defined MUX
+	http.ListenAndServe(":8081", nil)
 
-			// Get connection
-			conn := val
-
-			// Send FRAME message to client, requesting a FRAME
-			conn.WriteMessage(websocket.TextMessage, []byte("FRAME"))
-			log.Print("Sent FRAME request text message")
-
-			msgType, data, err := conn.ReadMessage()
-			if err != nil {
-				log.Print("Couldn't read FRAME message reply from client: ", nextClientID)
-				go cs.unbindSocket(nextClientID)
-				continue
-			}
-
-			// If binary message, image bytes are being sent
-			if msgType == websocket.BinaryMessage {
-
-				// Make sure data is not nil
-				if data != nil {
-					log.Print("Recieved Image from ", nextClientID)
-
-					// Get result string from image classifier
-					resultString := cs.classifier.ClassifyImage(data)
-
-					// Send results over websocket to client
-					conn.WriteMessage(websocket.TextMessage, []byte(resultString))
-
-				} else {
-					log.Print("Recieved empty socket binary message")
-					continue
-				}
-
-			} else if msgType == websocket.TextMessage {
-				log.Print("Recieved Text Message:")
-				log.Print(data)
-			}
-
-			duration := time.Since(startTime)
-			log.Println("Handled socket request in {} seconds", duration)
-
-		}
-
-	}
 }
 
 // type FrameData struct {
