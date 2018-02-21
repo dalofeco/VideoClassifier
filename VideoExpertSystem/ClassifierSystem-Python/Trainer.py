@@ -2,6 +2,8 @@ import tensorflow as tf
 from tf_scripts import retrain as tf_retrain
 from sklearn.model_selection import train_test_split
 from tflearn.data_utils import to_categorical
+import matplotlib.pyplot as plt
+
 import tflearn
 import numpy as np
 from collections import deque
@@ -55,13 +57,15 @@ class RNNTrainer():
         
         # Number of frames to consider at once
         self.FRAME_BATCH_LENGTH = 30
-
+        
+        # 2048-d vector length for image features before pooling layer from image classifier CNN 
+        self.INPUT_LENGTH = 2048 
         
         # Define model version to use (tf_files-v[0.3])
         self.modelVersion = modelVersion
         
         # Initialize important directories as class variables
-        self.tf_files_dir = '../Models/tf_files-v{0}/'.format(self.modelVersion)
+        self.tf_files_dir = '../../Models/tf_files-v{0}/'.format(self.modelVersion)
         self.dataset_dir = self.tf_files_dir + 'dataset/rnn/'
         self.features_dir = self.tf_files_dir + 'features/'
         self.tryCreateDirectory(self.features_dir)
@@ -161,7 +165,7 @@ class RNNTrainer():
                         
                         
     # Get the data from our saved predictions/pooled features
-    def readFeatures(self):
+    def readFeatures(self, frameBatchLength):
         
         # Performance metrics
         start = time.time();
@@ -205,18 +209,25 @@ class RNNTrainer():
 
                     # Enumerate and iterate through frames
                     for i, frame in enumerate(frameFeatures):
-                        cnnFeatures = frame[0]
-                        actualLabel = frame[1]
                         
-                        # If deque of size of batch length, start adding to X and Y
-                        if (len(featuresDeque) == self.FRAME_BATCH_LENGTH - 1):
-                            featuresDeque.append(cnnFeatures)
-                            X.append(np.array(list(featuresDeque)))
-                            y.append(Categories.labelToNum(actualLabel))
-                            featuresDeque.popleft()
-                        else:
-                            # Add to the deque
-                            featuresDeque.append(cnnFeatures)
+                        # Only for every four frames
+                        if (i % 4) == 0:          
+                            
+                            # Read features and label
+                            cnnFeatures = frame[0]
+                            actualLabel = frame[1]
+                        
+                            # If deque of size of batch length, start adding to X and Y
+                            if (len(featuresDeque) == frameBatchLength - 1):
+                                featuresDeque.append(cnnFeatures)
+                                X.append(np.array(list(featuresDeque)))
+                                y.append(Categories.labelToNum(actualLabel))
+                                featuresDeque.popleft()
+                            else:
+                                # Add to the deque
+                                featuresDeque.append(cnnFeatures)
+                        
+                        
                             
                 # Update progress bar
                 pbar.update(1)
@@ -226,32 +237,41 @@ class RNNTrainer():
             
             # Calculate time for performance metrics
             timeElapsed = time.time() - startTime
-            print(category + " finished in {:.0f}:{:.0f}:{:.0f}.".format((timeElapsed%24*3600)/3600, (timeElapsed%3600)/60, timeElapsed%60))
+            print(category + " finished in {:.2f} seconds.".format(timeElapsed))
+
+            
+        # Calculate length of the dataset
+        datasetLength = len(X)
             
         # Print size of dataset
-        print("Total dataset size: {}".format(len(X)))
+        print("Total dataset size: {}".format(datasetLength))
 
         # Convert to Numpy arrays
         X = np.array(X)
         y = np.array(y)
 
-        # Reshape 
-        X = X.reshape(-1, self.FRAME_BATCH_LENGTH, len(X))
+        # Reshape to dimensions, with batches of defined input length
+        X = X.reshape(datasetLength, frameBatchLength, self.INPUT_LENGTH)
         
+        print("X and X Shape:")
         print(X)
-        print(y)
+        print(X.shape)
 
+        print("Y and Y Shape:")
+        print(y)
+        print(y.shape)
+        
         # One-hot encoded categoricals.
         y = to_categorical(y, num_categories)
 
         # Split into train and test.
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=42)
+        # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=42)
 
         # Log loading time
-        print("Loaded data in %d seconds!", time.time() - start)
+        print("Loaded data in {} seconds!".format(time.time() - start))
 
         # Return data
-        return X_train, X_test, y_train, y_test
+        return X, y
     
     
     # Prepare data, then train
@@ -262,58 +282,194 @@ class RNNTrainer():
     # Execute training after rnn dataset is ready
     def train(self):
         
+        # Log
         print("Initiating RNN training...")
-        
-        # Define batch size
-        batch_size = 20
-        
-        # Define number of frames
-        numOfFrames = 100;
         
         # Performance metrics
         start = time.time();
         
-        # Load training data
-        X_train, X_test, y_train, y_test = self.readFeatures();
+        # Training checkpoints
+        CHECKPOINT_PATH = "../../Models/tf_files-v0.3/rnn-checkpoints/"
         
-        # Log time elapsed loading training data
-        print("Training data loaded in %d seconds!", time.time() - start)
+        # Image lookback
+        frames_lookback = 16
         
-        # Get num of categories
-        numOfCategories = len(y_train[0])
-        print("Num of Categories: %d", numOfClasses)
+        # Define training parameters
+        num_epochs = 4
+        total_series_length = 50000 # FIX THIS
+        truncated_backprop_length = 16
+        state_size = 2048
+        num_classes = len(self.labels)
+        echo_step = 3
+        batch_size = 8
+        num_batches = total_series_length//batch_size//truncated_backprop_length
         
-        # Get our LSTMRNN
-        net = LSTMRNN.getNetwork(numOfClasses, numOfFrames);
+        # Define X batch placeholder
+        X_batch_ph = tf.placeholder(tf.float32, [batch_size, truncated_backprop_length, self.INPUT_LENGTH])
         
-        # Train the model
-        model = tflearn.DNN(net, tensorboard_verbose=0)
-        model.fit(X_train, y_train, validation_set=(X_test, y_test), show_metric=True, batch_size=batch_size, snapshot_step=100, n_epoch=4)
+        # Y batch has batch_size elements, with categories for each backprop frame
+        y_batch_ph = tf.placeholder(tf.int32, [batch_size, num_classes])
         
-        # And save it
-        model.save(self.tf_files_dir + 'checkpoints/rnn.tflearn');
+        # Define cell and hidden state
+        cell_state_ph = tf.placeholder(tf.float32, [batch_size, state_size])
+        hidden_state_ph = tf.placeholder(tf.float32, [batch_size, state_size])
         
+        # Define init state for LSTM cell
+        init_state = tf.nn.rnn_cell.LSTMStateTuple(cell_state_ph, hidden_state_ph)
         
-   
+        # Initialize weight variable tensors with random data
+        W = tf.Variable(np.random.rand(state_size, num_classes), dtype=tf.float32)
+        
+        # Initialize bias variable tensors with zeroes
+        b = tf.Variable(np.zeros((1, num_classes)), dtype=tf.float32)
+        
+        # Define input series and labels series
+        inputs_series = tf.unstack(X_batch_ph, axis=1)
+        labels_series = tf.unstack(y_batch_ph, axis=1)
+        
+        # Define LSTM cell
+        cell = tf.nn.rnn_cell.BasicLSTMCell(state_size, state_is_tuple=True)
+        
+        # Create RNN from LSTM cell and inputs
+        states_series, current_state = tf.nn.static_rnn(cell, inputs_series, init_state)
 
+        # Define the logits fully connected layer   
+        logits_series = [tf.matmul(state, W) + b for state in states_series]
+        
+        # Define softmax layer for one-hot encoding of output classification
+        predictions_series = [tf.nn.softmax(logits) for logits in logits_series]
+        
+        # Define losses function
+        losses = [tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels) for logits, labels in zip(logits_series, labels_series)]
+        
+        # Define total loss function
+        total_loss = tf.reduce_mean(losses)
+        
+        # Define training step optimizer to minimize loss function
+        train_step = tf.train.AdagradOptimizer(0.3).minimize(total_loss)
+        
+        print("Initiating TensorFlow Session...")
+        
+        # INITIALIZE SESSION
+        with tf.Session() as sess:
+            
+            # Initialize all variables
+            sess.run(tf.global_variables_initializer())
+            
+            # Graphing
+            plt.ion()
+            plt.figure()
+            plt.show()
+        
+            # Define list to keep track of loss
+            loss_list = []
+            
+            # Repeat for each epoch
+            for epoch_idx in range(num_epochs):
+                
+                print("Loading Data for Epoch", epoch_idx)
+                
+                # Read the X and Y data
+                x,y = self.readFeatures(truncated_backprop_length)
+                
+                # Calculate number of batches 
+                num_batches = len(x) // batch_size
+                
+                # Define cell and hidden state to zeroes
+                _current_cell_state = np.zeros((batch_size, state_size))
+                _current_hidden_state = np.zeros((batch_size, state_size))
+            
+                # Batching logistics
+                for batch_idx in range(num_batches):
+                    
+                    start_idx = batch_idx * batch_size
+                    end_idx = start_idx + batch_size
+                    
+                    # Slice the batch
+                    batchX = x[start_idx:end_idx,:,:]
+                    batchY = y[start_idx:end_idx,:]
+                    
+                    # Run the training session
+                    _total_loss, _train_step, _current_state, _predictions_series = sess.run([total_loss, train_step, current_state, predictions_series], 
+                                                                                             feed_dict={
+                                                                                                 X_batch_ph: batchX,
+                                                                                                 y_batch_ph: batchY,
+                                                                                                 cell_state_ph: _current_cell_state,
+                                                                                                 hidden_state_ph: _current_hidden_state
+                                                                                             })
 
+                    # Update the current cell states
+                    _current_cell_state, _current_hidden_state = _current_state
+
+                    # Keep track of total loss by appending to local list
+                    loss_list.append(_total_loss)
+
+                    # Log training messages every 2%
+                    if batch_idx % (num_batches // 50) == 0:
+                        print("Step",batch_idx, "out of", num_batches,  "- Batch loss: ", _total_loss)
+                        self.plotProgress(loss_list, _predictions_series, batchX, batchY, truncated_backprop_length)
+                        
+                print("Epoch ", epoch_idx, " completed.")
+                    
+        
     # Attempt to create dir
     def tryCreateDirectory(self, dir):
         try:
             os.mkdir(dir);
         except FileExistsError:
-            pass
+            pass        
+
+
+    def plotProgress(self, loss_list, predictions_series, batchX, batchY, truncated_backprop_length):
+        plt.subplot(2, 3, 1)
+        plt.cla()
+        plt.plot(loss_list)
+
+        for batch_series_idx in range(5):
+            
+            # Transform predictions_series to a one hot encoded series
+            one_hot_output_series = np.array(predictions_series)[:, batch_series_idx, :]
+            single_output_series = np.array([(1 if out[0] < 0.5 else 0) for out in one_hot_output_series])
+
+            # Create subplot
+            plt.subplot(2, 3, batch_series_idx + 2)
+            plt.cla()
+            
+            # Define plot axis [Xmin, Xmax, Ymin, Ymax]
+            plt.axis([0, truncated_backprop_length, 0, 2])
+            left_offset = range(truncated_backprop_length)
+            
+            # Compute mean for frame features in batch
+            frameBatchMeans = np.array([np.mean(frame) for frame in batchX[batch_series_idx,:,:]])
+            
+            # Convert discrete categories to numbered
+            encodedCategories = []
+            for i, categoryActive in enumerate(batchY[batch_series_idx]):
+                if categoryActive:
+                    encodedCategories.append(i+1)
+                    
+            encodedCategories = np.array(encodedCategories)
+            
+            # encodedCategories = np.array([(Categories.NORMAL+1 if category[0] else Categories.SHOOTING+1) for category in batchY[batch_series_idx]])
+            
+            plt.bar(left_offset, frameBatchMeans, width=1, color="blue")
+            plt.bar(left_offset, encodedCategories * 0.5, width=1, color="red")
+            plt.bar(left_offset, single_output_series * 0.3, width=1, color="green")
+
+        plt.draw()
+        plt.pause(0.0001)
 
 
 # Example RNN training
 
 # Initialize trainer
-# trainer = RNNTrainer(['shooting', 'normal'], 0.3)
-trainer = RNNTrainer(['normal', 'shooting'], 0.3)
-print(trainer.readFeatures())
+trainer = RNNTrainer(['shooting', 'normal'], 0.3)
+# print(trainer.readFeatures())
 # Extract CNN Pool Layer Data
 # trainer.extractPoolLayerData()
 
 # Launch training process
-# trainer.train()
+trainer.train()
+
+
 

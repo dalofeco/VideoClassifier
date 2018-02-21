@@ -22,7 +22,7 @@ MAX_PLAYBACK_SPEED = 100
 
 class VideoClassifier:
     
-    def __init__(self, category, version, mode='cnn', state=0, interval=1):
+    def __init__(self, category, version, mode='cnn', state=0, interval=3):
         
         # Validate modes
         if (mode != 'cnn' and mode != 'rnn'):

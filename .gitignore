@@ -8,9 +8,14 @@
 *tf_files*
 */videos/*
 */dataset/*
-VideoCache
+VideoCache/*
 
 .vscode
+*.sync
 
 tests
 tensorflow
+
+Docker
+
+!*/.empty
