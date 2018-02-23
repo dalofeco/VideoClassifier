@@ -34,7 +34,7 @@ class CNNTrainer():
         
         bottleneck_dir = self.tf_files_dir + 'bottlenecks/'
         model_dir = self.tf_files_dir + 'models/'
-        summaries_dir = self.tf_files_dir + 'training_summaries/' + architecture
+        summaries_dir = self.tf_files_dir + 'training_summaries.tb
         output_graph_dir = self.tf_files_dir + 'retrained_graph.pb'
         output_labels_dir = self.tf_files_dir + 'retrained_labels.txt'
         
