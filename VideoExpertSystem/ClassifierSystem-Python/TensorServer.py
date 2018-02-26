@@ -1,101 +1,183 @@
 from http.server import BaseHTTPRequestHandler
 from http.server import HTTPServer
+import socketserver, threading
+import sys, json
+import time
+
+import base64
 from Classifier import Classifier
 
-import sys, json
-from urllib.parse import urlparse
+classifier = Classifier(0.3)
 
-VIDEO_CACHE_DIR = "../../VideoCache/"
+class ClassifierHTTPServer(socketserver.ThreadingMixIn, HTTPServer):
+            
+    class ClassifierHTTPHandler(BaseHTTPRequestHandler):
 
-class ClassifyRequestHandler(BaseHTTPRequestHandler):
+        # Respond to POST requests
+        def do_POST(self):
+            
+            startTime = time.time()
+            
+            # If path is null for some reason, exit
+            if (not self.path):
+                print("Path is null...")
+                sys.exit()
+            
+            # Get content type
+            content_type = self.headers["Content-Type"]
+            content_length = self.headers["Content-Length"]
+            
+            # If content type or length unspecified, return
+            if not content_type or not content_length:
+                print("No content type specified")
+                return
+            
+            # Parse content length to integer
+            content_length = int(content_length)
+
+            # Make sure JSON data specified
+            if content_type == "application/json":
+                        
+                # If POST with classifiyInit request
+                if (self.path[0:13] == "/classifyInit"):
+
+                    # Generate ID and send as JSON
+                    data = { 'cid': self.generateID() }
+                    self.respondJSON(data)
+                    
+                    print("Responded classifyInit in {} seconds".format(time.time() - startTime))
+                    return
+
+            # If image being sent
+            elif content_type == "image/jpeg":
                 
-    # Respond to GET requests
-    def do_GET(self):
-        print("GOT request: " + self.path)
-        
-        # If path is null for some reason, exi
-        if (not self.path):
-            print("Path is null...")
-            sys.exit()
-        
-        # If GET request is for classification, call function
-        if (self.path[0:9] == "/classify"):
-            self.handleClassifyRequest()
-        else:
+                # If POST with classify request 
+                if (self.path[0:9] == "/classify"):
+                    imageData = self.rfile.read(content_length)
+                    
+                    # Load expected values
+                    # cid = jsonData['cid']
+                    # data = jsonData['data']
 
-            print("Unrecognized GET request")
-    
-    # Function for handling classification request
-    def handleClassifyRequest(self):
-        
-        # Get the query and parse its components
-        query = urlparse(self.path).query
-        query_components = dict(qc.split("=") for qc in query.split("&"))
-        
-        # Get the image path query
-        imagePath = query_components["image"]
-        imagePath = imagePath.replace("%20", " ")
+                    # Get classifier response
+                    response = classifier.classifyCNN(base64.b64decode(imageData.decode('utf-8')))
 
-        # Logging 
-        print("Handle request for image: " + imagePath)
-
-
-        # Make sure the path was specified as a query
-        if (imagePath):
+                    # Organize result and send as JSON
+                    data = { 'result': response }                
+                    self.respondJSON(data)
+                    print("Responded classification in {} seconds".format(time.time() - startTime))
+                    return
             
-            # Load the specified image in the classifier
-            classifier.loadImage(VIDEO_CACHE_DIR + imagePath)
-
-            # Get classification
-            result = classifier.classifyCNN()
-
-            # Log result
-            print(result)
-
-            # Calculate top category
-            topCategory = ""
-            highestVal = 0
-
-            # Iterate through results, save highest score with its category
-            for key in result:
-                if (highestVal < int(result[key])):
-                    highestVal = int(result[key])
-                    topCategory = key
+        
+        # Responds request with JSON
+        def respondJSON(self, data):
+            # Dump to JSON string
+            jsonData = json.dumps(data)
             
-
-            # Organize result data
-            resultData = {topCategory: highestVal}
-
-            # Convert to byte-like type for sending
-            resultData = json.dumps(resultData);
-
-            # Send response with result
-            self.send_response(200);
+            # Set response headers
+            self.send_response(200)
             self.send_header("Content-Type", "application/json")
-            self.send_header("Content-Length", len(resultData))
+            self.send_header("Content-Length", len(jsonData))
             self.end_headers()
-            self.wfile.write(resultData.encode())
+            
+            # Write json data into request
+            self.wfile.write(jsonData.encode())
+            return
+    
+        # Placeholder for generating ID
+        def generateID(self):
+            return "0012"
+        
+        
+        # Respond to GET requests
+        def do_GET(self):
+
+            # If path is null for some reason, exit
+            if (not self.path):
+                print("Path is null...")
+                sys.exit()
+
+            # If GET request is for classification, call function
+            if (self.path[0:9] == "/classify"):
+
+                # Open html and send
+                with open("html/classify.html") as classifyHTMLFile:
+                    classifyHTMLData = classifyHTMLFile.read()
+
+                    # Send response with result
+                    self.send_response(200);
+                    self.send_header("Content-Type", "text/html")
+                    self.send_header("Content-Length", len(classifyHTMLData))
+                    self.end_headers()
+                    self.wfile.write(classifyHTMLData.encode())
+                    return
+
+            # Serve js and css directories
+            elif (self.path[0:4] == "/js/"):
+                self.sendFile("js/" + self.path[4:])
+
+            elif (self.path[0:5] == "/css/"):
+                self.sendFile("css/" + self.path[5:])
+
+            else:
+                print("Unrecognized GET request:", self.path)
+
+        def sendFile(self, filePath):
+            
+            
+            content_type = "text/"
+            if filePath[-3:] == "css":
+                content_type += "css"
+            elif filePath[-2:] == "js":
+                content_type += "js"
+            else:
+                print("Unrecognized file format")
+                self.send_error(404)
+                return
+            
+            # Try to fetch that file
+            try:
+                with open(filePath) as file:
+                    fileData = file.read()
+                    self.send_response(200);
+                    self.send_header("Content-Type", "text/javascript")
+                    self.send_header("Content-Length", len(fileData))
+                    self.end_headers()
+                    self.wfile.write(fileData.encode())
+
+            except FileNotFoundError:
+                self.send_error(404)
+                return
 
 # Main
 if __name__ == '__main__':
 
-    PORT_NUMBER = 8081
+    # Define the port numbers
+    HOST, HTTP_PORT, SOCKET_PORT = "", 8080, 8081
     
     # Make sure exactly one argument is supplied
     if (len(sys.argv) == 2):
-
-        # Classifier class 
-        classifier = Classifier(sys.argv[1]);
-
-        print("Started server listening on port ", PORT_NUMBER);
-
-        # Server http server on defined address and port, with specified request handler
-        httpd = HTTPServer(("127.0.0.1", PORT_NUMBER), ClassifyRequestHandler);
-        httpd.serve_forever();
-
+        
+        try:    
+#            # Create a socket classifier server instance
+#            socketServer = ClassifierSocketServer(HOST, SOCKET_PORT, sys.argv[1])
+#            print("Starting socket server listening on port", SOCKET_PORT);
+#            threading.Thread(target=socketServer.listen).start()
+            
+            # Server http server on defined address and port, with specified request handler
+            httpServer = ClassifierHTTPServer((HOST, HTTP_PORT), ClassifierHTTPServer.ClassifierHTTPHandler);
+            #classifier = Classifier(sys.argv[1])
+            print("Starting HTTP server listening on port", HTTP_PORT)
+            threading.Thread(target=httpServer.serve_forever).start();
+            threading.Thread(target=quit).start()
+        
+        except (KeyboardInterrupt, SystemExit):
+            print("Exiting...")
+            sys.exit()
         
     else:
         # Print usage info
         print("Usage: python3 TensorServer.py (model_number)");
+        sys.exit()
     
     
