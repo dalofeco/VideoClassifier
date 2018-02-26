@@ -1,10 +1,11 @@
 
 var videoFileName = '';
-const INTERVAL = 3;
+const INTERVAL = 1;
 var frameCount = 0;
 var ws = null
 
 var STREAMING = false
+var lastTime = 0
         
 // ------------ DOCUMENT READY SCRIPT --------------
 
@@ -171,6 +172,10 @@ function updateResult(result){
 // --------------- VIDEO PLAYER ------------------
 
 function getFrame(callback) {
+    
+    console.log("Interval: " + (Date.now() - lastTime).toString() + " ms")
+    lastTime = Date.now()
+    
     // Get video player element
     var videoPlayer = document.getElementById('videoPlayer')
     var timeStamp = videoPlayer.currentTime;
