@@ -1,6 +1,6 @@
 
 var videoFileName = '';
-const INTERVAL = 1;
+const INTERVAL = 4;
 var frameCount = 0;
 var ws = null
 
@@ -69,10 +69,11 @@ function startVideoAnalysis() {
 
         // Define handler for video updates
         $('#videoPlayer').on('timeupdate', function(e) {
+            startTime = Date.now()
             // Only do every X amount of refreshes based on interval
             if (frameCount % INTERVAL == 0) {
                 console.log("Sending frame " + frameCount.toString())
-                sendFrameForClassification(connectionID)
+                sendFrameForClassification(connectionID, startTime)
             }
             frameCount++;
         });
@@ -115,7 +116,7 @@ function stopVideoAnalysis() {
 }
 
 // Function to classify the frame currently played on videoPlayer
-function sendFrameForClassification(connectionID) {
+function sendFrameForClassification(connectionID, startTime) {
     
     // Get current on screen frame and its data
     getFrame(function(frameData) {
@@ -136,7 +137,7 @@ function sendFrameForClassification(connectionID) {
                 var b64image = btoa(imageBlobText)
 
                 // Send image data via socket
-                sendImageData(b64image, connectionID)
+                sendImageData(b64image, connectionID, startTime)
             }
         });
 
@@ -144,7 +145,7 @@ function sendFrameForClassification(connectionID) {
 }
 
 // Sends image data over post for with connectionID
-function sendImageData(textBlob, connectionID) {
+function sendImageData(textBlob, connectionID, startTime) {
     
     // Round to nearest integer, multiplying by 100 to consider hundreths
     roundedTimeStamp = Math.round(timeStamp * 100);
@@ -160,6 +161,7 @@ function sendImageData(textBlob, connectionID) {
     sendPOST(textBlob, "/classify", "image/jpeg", function(result) {
         var resultText = result['result']
         updateResult("SH:" + resultText['shooting'] + " - " + "NO:" + resultText['normal'])
+        console.log("Took " + ((Date.now() - startTime)/1000).toString() + " seconds")
     })
 }
 

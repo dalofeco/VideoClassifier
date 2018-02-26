@@ -1,4 +1,5 @@
 import tensorflow as tf
+from tensorflow.python.platform import gfile
 from tf_scripts import retrain as tf_retrain
 from sklearn.model_selection import train_test_split
 from tflearn.data_utils import to_categorical
@@ -15,16 +16,59 @@ from tqdm import tqdm
 import Classifier
 import Categories
 
-# Class for training CNN layer
-class CNNTrainer():
+# Base Trainer Class for CNNTrainer and RNNTrainer
+class Trainer():
     
-    # Constructor
-    def __init__(self, modelVersion):
+    # Constructor for Trainer base class
+    def __init__():
         
         # Initialize as class variables
         self.tf_files_dir = "../Models/tf_files-v{0}/".format(modelVersion)
         self.dataset_dir = self.tf_files_dir + 'dataset/cnn/'
         self.modelVersion = modelVersion;
+        
+    # Simple function wrapping mkdir in catch FileExistsError
+    def tryCreateDirectory(self, dir):
+        try:
+            os.mkdir(dir);
+        except FileExistsError:
+            pass
+        
+    # Exports .pb file into tensorboard graphable logs
+    def extractTBfromGraph(self):
+
+        LOGDIR = self.tf_files_dir + "/"
+        
+        
+        with tf.Session() as sess:
+            model_filename ='../../Models/tf_files-v0.3/retrained_graph.pb'
+            with gfile.FastGFile(model_filename, 'rb') as f:
+                graph_def = tf.GraphDef()
+                graph_def.ParseFromString(f.read())
+                g_in = tf.import_graph_def(graph_def)
+                LOGDIR='log.txt'
+                train_writer = tf.summary.FileWriter(LOGDIR)
+                train_writer.add_graph(sess.graph)
+                train_writer.flush()
+                train_writer.close()
+
+    print("Now run: 'tensorboard --logdir [PATH-TO-LOG-FILE]")
+
+# Class for training CNN layer
+class CNNTrainer(Trainer):
+    
+    # Constructor
+    def __init__(self, modelVersion):
+        
+        # Call super class construction
+        super().__init__(modelVersion)
+        # Initializes the following
+        # self.tf_files_dir
+        # self.modelVersion
+        
+        # Init dataset directory
+        self.dataset_dir = self.tf_files_dir + "dataset/cnn/"
+        
         
     # Launches the retraining process for the CNN
     def retrain(self, architecture='inception_v3', training_steps=100):
@@ -51,9 +95,18 @@ class CNNTrainer():
     
     
 # Class for training RNN layer
-class RNNTrainer():
+class RNNTrainer(Trainer):
 
     def __init__(self, labels, modelVersion):
+        
+        # Initialize superclass constructor
+        super().__init__()
+         # Initializes the following
+        # self.tf_files_dir
+        # self.modelVersion
+        
+        # Initialize dataset directory
+        self.dataset_dir = self.tf_files_dir + 'dataset/rnn/'
         
         # Number of frames to consider at once
         self.FRAME_BATCH_LENGTH = 30
@@ -61,12 +114,6 @@ class RNNTrainer():
         # 2048-d vector length for image features before pooling layer from image classifier CNN 
         self.INPUT_LENGTH = 2048 
         
-        # Define model version to use (tf_files-v[0.3])
-        self.modelVersion = modelVersion
-        
-        # Initialize important directories as class variables
-        self.tf_files_dir = '../../Models/tf_files-v{0}/'.format(self.modelVersion)
-        self.dataset_dir = self.tf_files_dir + 'dataset/rnn/'
         self.features_dir = self.tf_files_dir + 'features/'
         self.tryCreateDirectory(self.features_dir)
         
@@ -412,14 +459,7 @@ class RNNTrainer():
                 print("Epoch ", epoch_idx, " completed.")
                     
         
-    # Attempt to create dir
-    def tryCreateDirectory(self, dir):
-        try:
-            os.mkdir(dir);
-        except FileExistsError:
-            pass        
-
-
+    # Attempt to create dir        
     def plotProgress(self, loss_list, predictions_series, batchX, batchY, truncated_backprop_length):
         plt.subplot(2, 3, 1)
         plt.cla()
@@ -463,13 +503,14 @@ class RNNTrainer():
 # Example RNN training
 
 # Initialize trainer
-trainer = RNNTrainer(['shooting', 'normal'], 0.3)
+
+# trainer = RNNTrainer(['shooting', 'normal'], 0.3)
 # print(trainer.readFeatures())
 # Extract CNN Pool Layer Data
 # trainer.extractPoolLayerData()
 
 # Launch training process
-trainer.train()
+# trainer.train()
 
 
 
