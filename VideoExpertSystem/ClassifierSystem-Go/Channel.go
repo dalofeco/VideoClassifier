@@ -7,24 +7,32 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// PACKETDATA DEFINITIONS
+// Packet data defining data to send to client
+type PacketData struct {
+	cid       string
+	data      []byte
+	timestamp time.Time
+}
+
+func (p *PacketData) toBytes() []byte {
+	stringValue := `{ "cid": "` + p.cid + `", "data":"` + string(p.data) + `"}`
+	return []byte(stringValue)
+}
+
+// Channel class is initialized with a websocket connection, and maintains the
+// 		connection active, recieving and transmitting data asynchronously with
+// 		go routines and a classifier instance.
+
+// CHANNEL DEFINITIONS
+// Channel contains websocket connection, classifier, and a data buffer
 type Channel struct {
 	conn       *websocket.Conn
 	classifier *Classifier
 	send       chan PacketData
 }
 
-type PacketData struct {
-	name      string
-	data      []byte
-	timestamp time.Time
-}
-
-func (p *PacketData) toBytes() []byte {
-	stringValue := `{ "name": "` + p.name + `", "data":"` + string(p.data) + `"}`
-	return []byte(stringValue)
-}
-
-// Create a new channel with the websocket connection
+// Create a new channel with the specified websocket connection
 func NewChannel(conn *websocket.Conn) *Channel {
 
 	c := &Channel{
@@ -105,7 +113,7 @@ func (c *Channel) handleIncomingPacket(data []byte, msgType int) {
 		resultString := c.classifier.ClassifyImage(data)
 
 		packetData := &PacketData{
-			name:      "RESULTS",
+			cid:       "RESULTS",
 			data:      []byte(resultString),
 			timestamp: startTime,
 		}
