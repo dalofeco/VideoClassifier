@@ -2,6 +2,7 @@ from Classifier import Classifier
 import time, sys 
 import multiprocessing
 
+# Handles multiple classifier instances and a shared queue for task queueing
 class ClassifierManager():
     
     def __init__(self, model_version, num_classifiers):

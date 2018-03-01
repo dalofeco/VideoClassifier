@@ -161,12 +161,7 @@ class ClassifierHTTPServer(socketserver.ThreadingMixIn, HTTPServer):
     
         # Placeholder for generating ID
         def generateID(self):
-            return "0012"
-    
-
-# Handles multiple classifier instances and a shared queue for task queueing
-
-                
+            return "0012"                
 
         
 #### MAIN ####
