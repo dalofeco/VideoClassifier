@@ -1,17 +1,26 @@
-
-var videoFileName = '';
-const INTERVAL = 4;
+// Array to store frame sequence to send
+var frames = []
 var frameCount = 0;
+
+// Websocket connection object
 var ws = null
 
+// Streaming STATE variable
 var STREAMING = false
-var lastTime = 0
-        
-// ------------ DOCUMENT READY SCRIPT --------------
 
-// On document load
+// Intervals for timed interval functions
+const SEND_TIME_INTERVAL = 500;
+const FRAME_TIME_INTERVAL = 100;
+
+// Interval function placeholders for clearing intervals 
+var frameInterval = null
+var requestInterval = null
+
+// -------------- DOCUMENT READY SCRIPT -----------------
+
 $(document).ready(function() {
 
+    // Graceful websocket closing before window unload
     window.onbeforeunload = function() {
         if (ws != null) {
             ws.onclose = function() {}; // disable on close handler
@@ -20,7 +29,7 @@ $(document).ready(function() {
         }
     }
     
-    // Define file picker handlers
+    // Define file picker handler
     $('#videoFilePicker').change(selectFile)
     
     // Define video player handler
@@ -32,62 +41,204 @@ $(document).ready(function() {
     });
     
     // Define classify button handler to start active analysis
-    $("#classifyButton").click(toggleStreaming);
+    $("#classifyButton").click(toggleAnalysis);
 });
 
+// ------------------------------------------------------
+// -------------------- WEB SOCKETS ---------------------
 
-// ---------------------------------------------
+// Initializer for web socket
+function initWebSocket(onopenCallback) {
+    
+    // Declare websocket object with url
+    ws = new WebSocket("ws://" + window.location.hostname + ":8081/ws")
+    
+    // On websocket connection established
+    ws.onopen = onopenCallback
+    
+    // When message is recieved
+    ws.onmessage = function(event) {
+        console.log("Recieved message!")
+        updateResult(event.data)
+    }
+    
+    // When ws is closed
+    ws.onclose = function(event) {
+        ws = null
+        console.log("Websocket connection closed")
+        
+        stopAnalysis()
+    }
+    
+    return ws
+}
 
+// Sends all stored frames to server via websocket
+function sendFramesForClassification(startTime) {
+    
+    // Make sure ws is not null
+    if (ws && frames.length > 0) {
+        
+        // Log
+        console.log("Sending " + frames.length.toString() + " frames.")
+        
+        // Send JSON array 
+        ws.send(JSON.stringify(frames))
+
+        // Clear frames array
+        frames = []
+    } else {
+        console.log("Couldn't send frames: " + frames.length.toString())
+    }
+}
+
+// ------------------------------------------------------
 // ------------ VIDEO FRAME CLASSIFICATION --------------
 
-
-function toggleStreaming() {
-    if (STREAMING) {
-        STREAMING = false
-        stopVideoAnalysis()
-    } else {
-        STREAMING = true
-        startVideoAnalysis()
-    }
-    return STREAMING
-}
-
 // Initiates the video analysis process from the start
-function startVideoAnalysis() {
+function startAnalysis() {
     
-    // Define callback for when socket is initialized
-    var startStreamCallback = function(data) {
-        console.log("Data:")
-        console.log(data)
+    // Only start stream if inactive
+    if (!STREAMING) {
         
-        // Get connection id from server
-        connectionID = data['cid']
-        
-        // Make sure video is not paused
-        if (document.getElementById('videoPlayer').paused) 
-            $("#videoPlayer").trigger("play")
+        // Init websocket with defined on open callback
+        ws = initWebSocket(function() {
 
-        // Define handler for video updates
-        $('#videoPlayer').on('timeupdate', function(e) {
-            startTime = Date.now()
-            // Only do every X amount of refreshes based on interval
-            if (frameCount % INTERVAL == 0) {
-                console.log("Sending frame " + frameCount.toString())
-                sendFrameForClassification(connectionID, startTime)
-            }
-            frameCount++;
-        });
+            // Make sure video is not paused
+            if (document.getElementById('videoPlayer').paused) 
+                $("#videoPlayer").trigger("play")
+
+            // Get new frame and store every defined interval   
+            frameInterval = setInterval(function() {
+                getFrame(function(frameData) {
+                    frames.push(frameData['blob'])
+                    frameCount++
+                    console.log("Adding frame to frames")
+                })
+            }, FRAME_TIME_INTERVAL)    
+
+            // Send request every defined interval 
+            requestInterval = setInterval(function() {
+                startTime = Date.now()
+                sendFramesForClassification(startTime)
+            }, SEND_TIME_INTERVAL)    
+
+        }) 
+        
+        STREAMING = true
     }
-    
-    
-    // Generate data for req
-    data = {"id": "0", "intent":"start"}
-    
-    // Stringify the JSON object and send post
-    jsonData = JSON.stringify(data)
-    sendPOST(jsonData, '/classifyInit', 'application/json', startStreamCallback)
 }
 
+// Stops video analysis process
+function stopAnalysis() {
+    // Only stop streaming if active
+    if (STREAMING)
+
+        // Clear the interval functions
+        clearInterval(frameInterval)
+        clearInterval(requestInterval)
+
+        // Pause video if not already paused
+        if (!document.getElementById('videoPlayer').paused)
+            $("#videoPlayer").trigger("pause");
+        
+        STREAMING = false
+    
+    
+    // Close websocket connection if active
+    if (ws)
+        ws.close()
+    
+    ws = null
+}
+
+// Toggle streaming: handler for classify button
+function toggleAnalysis() {
+    if (!STREAMING) {
+        startAnalysis()
+    } else {
+        stopAnalysis()
+    }
+}
+
+// ---------- DOM ELEMENT MANIPULATION ----------
+function updateResult(result){
+    $("#results").text(result)
+}
+
+// ------------ DATA MANIPULATION ---------------
+function b64Encode(imageBlob, callback) {
+    const reader = new FileReader()
+    reader.readAsBinaryString(imageBlob)
+
+    // This fires after the blob has been read/loaded.
+    reader.addEventListener('loadend', (e) => {
+
+        // Get image blob from result
+        const imageBlobText = e.srcElement.result;
+
+        var b64image = btoa(imageBlobText)
+        
+        callback(b64image)
+    })  
+}
+
+// --------------- VIDEO PLAYER ------------------
+function getFrame(callback) {
+        
+    // Get video player element
+    var videoPlayer = document.getElementById('videoPlayer')
+    var timeStamp = videoPlayer.currentTime;
+
+    // Create a new canvas object and set height and width equal to video
+    var canvas = document.createElement('canvas')
+    canvas.height = videoPlayer.videoHeight
+    canvas.width = videoPlayer.videoWidth
+
+    // Get canvas context and draw video player image onto it
+    var context = canvas.getContext('2d')
+    context.drawImage(videoPlayer, 0, 0, canvas.width, canvas.height);
+    
+    // Get image data by converting to base64 blob
+    var image = new Image()
+    image.src = canvas.toDataURL()
+    
+    canvas.toBlob(function(blob) {
+        b64Encode(blob, function(b64blob) {
+            callback({'blob': b64blob, 'time': timeStamp})
+        })    
+    }, 'image/jpeg', 1)
+
+}
+
+// ---------------- FILE PICKER ----------------
+// Function for when file picker selection changes
+function selectFile(e) {
+    
+    // Get file name if picked
+    if (event.target.files.length == 1) {
+
+        videoFileName = event.target.files[0].name
+
+        // Convert into URL
+        var fileURL = URL.createObjectURL(event.target.files[0])
+
+        // Get video player and set URL
+        videoPlayer = $("#videoPlayer")
+        videoPlayer.attr("src", fileURL)
+
+        // Set count to 
+        frameCount = 0
+    } else if (event.target.files.length > 1) {
+        alert("Only 1 video file allowed!")
+    } else {
+        console.log("No files picked.")
+    }
+}
+
+// -----------------------------------------------
+
+// ---------------- HTTP HELPERS -----------------
 // Sends a POST request, callback must accept response json object
 function sendPOST(data, url, content_type, callback) {
     
@@ -105,118 +256,3 @@ function sendPOST(data, url, content_type, callback) {
     xhttp.send(data)
 }
 
-function stopVideoAnalysis() {
-    // Remove the video player timeupdate handler
-    $('#videoPlayer').on('timeupdate', function(){})
-
-    // Pause video if not already paused
-    if (!document.getElementById('videoPlayer').paused)
-        $("#videoPlayer").trigger("pause");
-
-}
-
-// Function to classify the frame currently played on videoPlayer
-function sendFrameForClassification(connectionID, startTime) {
-    
-    // Get current on screen frame and its data
-    getFrame(function(frameData) {
-        imageBlob = frameData['blob']
-        timeStamp = frameData['time']
-
-        const reader = new FileReader()
-        reader.readAsBinaryString(imageBlob)
-
-        // This fires after the blob has been read/loaded.
-        reader.addEventListener('loadend', (e) => {
-
-            // Make sure connectionID is supplied
-            if (connectionID != null) {
-                const imageBlobText = e.srcElement.result;
-
-//                var b64image = imageBlobText.replace(/^data:image\/(png|jpg);base64,/, "");
-                var b64image = btoa(imageBlobText)
-
-                // Send image data via socket
-                sendImageData(b64image, connectionID, startTime)
-            }
-        });
-
-    });
-}
-
-// Sends image data over post for with connectionID
-function sendImageData(textBlob, connectionID, startTime) {
-    
-    // Round to nearest integer, multiplying by 100 to consider hundreths
-    roundedTimeStamp = Math.round(timeStamp * 100);
-    
-    // Define data to be sent to server
-//    var data = {
-//        "cid": connectionID,
-//        "data": textBlob.toString(),
-//        "timestamp": roundedTimeStamp
-//    }
-    
-    // Send post for classification with callback as updating result
-    sendPOST(textBlob, "/classify", "image/jpeg", function(result) {
-        var resultText = result['result']
-        updateResult("SH:" + resultText['shooting'] + " - " + "NO:" + resultText['normal'])
-        console.log("Took " + ((Date.now() - startTime)/1000).toString() + " seconds")
-    })
-}
-
-function updateResult(result){
-    $("#results").text(result)
-}
-
-
-
-// --------------- VIDEO PLAYER ------------------
-
-function getFrame(callback) {
-    
-    console.log("Interval: " + (Date.now() - lastTime).toString() + " ms")
-    lastTime = Date.now()
-    
-    // Get video player element
-    var videoPlayer = document.getElementById('videoPlayer')
-    var timeStamp = videoPlayer.currentTime;
-
-    // Create a new canvas object and set height and width equal to video
-    var canvas = document.createElement('canvas')
-    canvas.height = videoPlayer.videoHeight
-    canvas.width = videoPlayer.videoWidth
-
-
-    var context = canvas.getContext('2d')
-    context.drawImage(videoPlayer, 0, 0, canvas.width, canvas.height);
-    var image = new Image()
-    image.src = canvas.toDataURL()
-    canvas.toBlob(function(blob) {
-        callback({'blob': blob, 'time': timeStamp})
-    }, 'image/jpeg', 1)
-
-}
-
-// ---------------- FILE PICKER ----------------
-
-// Function for when file picker selection changes
-function selectFile(e) {
-    // Get file name
-    videoFileName = event.target.files[0].name
-    
-    // Convert into URL
-    var fileURL = URL.createObjectURL(event.target.files[0])
-    
-    // Get video player and set URL
-    videoPlayer = $("#videoPlayer")
-    videoPlayer.attr("src", fileURL)
-    
-    // Set count to 
-    frameCount = 0
-}
-
-// Define handlers
-$('#videoFilePicker').change(selectFile)
-
-// -----------------------------------------------
