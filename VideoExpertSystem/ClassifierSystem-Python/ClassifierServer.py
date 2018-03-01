@@ -5,7 +5,6 @@ import json, base64
 import sys, time
 
 from Classifier import Classifier
-from ClassifierManager import ClassifierManager
 
 # Multithreaded implementation of classifier server
 class ClassifierHTTPServer(socketserver.ThreadingMixIn, HTTPServer):
@@ -168,7 +167,7 @@ class ClassifierManager():
     def __init__(self, model_version):
         
         MAX_QUEUE_LEN = 30
-        NUM_CLASSIFIERS = 3
+        NUM_CLASSIFIERS = 5
         
         # Record start time before loading
         start = time.time()

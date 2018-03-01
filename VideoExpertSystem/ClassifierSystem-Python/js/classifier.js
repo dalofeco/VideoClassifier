@@ -1,6 +1,7 @@
 
 var videoFileName = '';
-const INTERVAL = 4;
+const INTERVAL = 250;
+var timeInterval = null
 var frameCount = 0;
 var ws = null
 
@@ -68,15 +69,15 @@ function startVideoAnalysis() {
             $("#videoPlayer").trigger("play")
 
         // Define handler for video updates
-        $('#videoPlayer').on('timeupdate', function(e) {
+        timeInterval = setInterval(function() {
             startTime = Date.now()
-            // Only do every X amount of refreshes based on interval
-            if (frameCount % INTERVAL == 0) {
-                console.log("Sending frame " + frameCount.toString())
-                sendFrameForClassification(connectionID, startTime)
-            }
+
+            console.log("Sending frame " + frameCount.toString())
+            sendFrameForClassification(connectionID, startTime)
+            
             frameCount++;
-        });
+        }, INTERVAL)
+            
     }
     
     
@@ -112,6 +113,8 @@ function stopVideoAnalysis() {
     // Pause video if not already paused
     if (!document.getElementById('videoPlayer').paused)
         $("#videoPlayer").trigger("pause");
+    
+    clearInterval(timeInterval)
 
 }
 
