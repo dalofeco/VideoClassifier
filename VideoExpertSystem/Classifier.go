@@ -101,7 +101,7 @@ func (c *Classifier) ClassifyImage(imageData []byte) (result string) {
 func (c *Classifier) loadModel() (graph *tf.Graph) {
 	// Load pre-trained model
 	// Define the graph directory
-	var graphDir = "../../Models/tf_files-v0.3/retrained_graph.pb"
+	var graphDir = "../Models/tf_files-v0.3/retrained_graph.pb"
 
 	// Read the graph (model) file
 	model, err := ioutil.ReadFile(graphDir)
@@ -125,7 +125,7 @@ func (c *Classifier) loadModel() (graph *tf.Graph) {
 
 func (c *Classifier) loadLabels() (labels []string) {
 
-	var labelsDir = "../../Models/tf_files-v0.3/retrained_labels.txt"
+	var labelsDir = "../Models/tf_files-v0.3/retrained_labels.txt"
 
 	// Load labels
 	labelsFile, err := os.Open(labelsDir)
