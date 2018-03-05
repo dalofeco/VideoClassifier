@@ -41,7 +41,7 @@ class Trainer():
         
         
         with tf.Session() as sess:
-            model_filename ='../../Models/tf_files-v0.3/retrained_graph.pb'
+            model_filename ='../Models/tf_files-v0.3/retrained_graph.pb'
             with gfile.FastGFile(model_filename, 'rb') as f:
                 graph_def = tf.GraphDef()
                 graph_def.ParseFromString(f.read())
@@ -336,7 +336,7 @@ class RNNTrainer(Trainer):
         start = time.time();
         
         # Training checkpoints
-        CHECKPOINT_PATH = "../../Models/tf_files-v0.3/rnn-checkpoints/"
+        CHECKPOINT_PATH = self.tf_files_dir + "rnn-checkpoints/"
         
         # Image lookback
         frames_lookback = 16

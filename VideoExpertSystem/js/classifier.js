@@ -51,7 +51,7 @@ $(document).ready(function() {
 function initWebSocket(onopenCallback) {
     
     // Declare websocket object with url
-    ws = new WebSocket("ws://" + window.location.hostname + ":8081/ws")
+    ws = new WebSocket("ws://" + window.location.hostname + ":8080/ws")
     
     // On websocket connection established
     ws.onopen = onopenCallback

@@ -9,7 +9,7 @@ from ClassifierManager import ClassifierManager
 class ClassifierServer():
     
     # Constructor function starting server
-    def __init__(self, PORT=8081):
+    def __init__(self, PORT=8080):
         
         # Save port number
         self.PORT = PORT
@@ -87,9 +87,20 @@ class ClassifierServer():
             self.write_message(result)
             print("Sent classification in {:.2f} seconds!".format(time.time() - startTime))
             
-            
-            
+# MAIN function
 if __name__ == "__main__":
-    classifierManager = ClassifierManager(0.3, 1)
-    socketServer = ClassifierServer(8081)
-    socketServer.start()
+    
+    # Define the port number
+    HTTP_PORT = 8080
+    
+    # Make sure exactly one argument is supplied
+    if (len(sys.argv) == 2):
+
+        classifierManager = ClassifierManager(0.3, 1)
+        socketServer = ClassifierServer(HTTP_PORT)
+        socketServer.start()
+        
+    else:
+        # Print usage info
+        print("Usage: python3 TornadoServer.py (model_number)");
+        sys.exit()

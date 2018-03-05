@@ -9,24 +9,21 @@ The Video Expert System (will) incorporate TensorFlow's machine learning capabil
 
 ##### Pre-requisites
 
-- Node.js
 - Python 3
+
 - TensorFlow 
+
 - OpenCV 
 
-#### Instructions for Running Classifier Server for Trained Model
+  ​
+
+#### Instructions for Running Tornado Classifier Server for Trained Model
 
 1. Clone the repository to your local machine.
 2. Copy the `tf_files` folder with your model to `/Models/tf_files-v{1.0}` replacing the brackets with your own version number.
-3. Navigate into the `WebInterface` directory using the command line.
-4. Run `npm install` to install all project dependencies.
-5. Run `node server.js` to initiate the server.
-6. On a separate command line window, navigate to `VideoExpertSystem`.
-7. Execute `python TensorServer.py {1.0}` or `python3 TensorServer.py {1.0}` depending on your Python 3 installation, replacing the brackets with your own version number.
-
-**Note:** The node.js server listens for requests at `http://localhost:8080/classify` to test the classification, and makes a request to `http://localhost:8081/classify` to get the classification from the Python TensorFlow server.
-
-
+3. Navigate into the `VideoExpertSystem` directory using the command line.
+4. Run `python3 ClassifierServer.py [model_version]`, replacing the brackets with your model version number to execute the server. 
+5. Navigate to `http://localhost:8081/classify` to get the test the web application for classification.
 
 
 
@@ -92,13 +89,9 @@ Usage: `python3 VideoClassifier.py (category) (model_version) [mode][state] [int
 
 Models are saved as `tf_files-v1.0` folders under the Model parent folder.
 
-#### WebInterface
-
-Node.js back-end providing web-based interface for user communication with the VideoExpertSystem. This back-end system interacts with Python TensorFlow back-end to provide training and classification capabilities.
-
 #### VideoExpertSystem
 
-Python-based TensorFlow programs for classifying images into their distinctive categories and training new CNN and RNN models.
+Python-based TensorFlow programs with socket and HTTP servers for classifying images and videos into their distinctive categories and training new CNN and RNN models.
 
 #### DatasetToolkit
 
@@ -117,15 +110,6 @@ Python based tools to manage video, image frames, and classify into respective c
 - Numpy
 - Scipy
 - tqdm - Progress bar support
-
-#### Node.js Dependencies
-
-- Express - software library for handling HTTP requests 
-- node-rest-client - RESTful client for generating HTTP requests
-
-
-- loadtest - npm package for generating web traffic and server load
-
 
 
 

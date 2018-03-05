@@ -15,7 +15,7 @@ class Classifier():
         self.count = 0
         
         # Use the model version directory
-        self.tf_files_dir = "../../Models/tf_files-v%s/" % self.modelVersion
+        self.tf_files_dir = "../Models/tf_files-v%s/" % self.modelVersion
 
         # Load model
         self.loadModel()
