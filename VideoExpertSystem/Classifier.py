@@ -39,7 +39,7 @@ class Classifier():
             self.sess = tf.Session()        
 
             # Feed the image_data as input to the graph and get last prediction
-            self.softmax_tensor = self.sess.graph.get_tensor_by_name('final_result:0')
+            self.cnn_softmax_tensor = self.sess.graph.get_tensor_by_name('final_result:0')
 
             # Log loading time
             print("Loaded Model v" + str(self.modelVersion) + " in %.2f seconds!" % (time.time() - start));
@@ -63,7 +63,7 @@ class Classifier():
             image_data = self.image_data;
             
         # Get predictions from softmax tensor layer
-        predictions = self.sess.run(self.softmax_tensor, {'DecodeJpeg/contents:0': image_data})
+        predictions = self.sess.run(self.cnn_softmax_tensor, {'DecodeJpeg/contents:0': image_data})
 
         # Sort to show labels of first prediction in order of confidence
         top_k = predictions[0].argsort()[-len(predictions[0]):][::-1]
@@ -90,3 +90,7 @@ class Classifier():
 
 
 # print(results)
+    def classifyRNN(self, frame_sequence):
+        pass
+        #predictions = self.sess.run(self)
+        

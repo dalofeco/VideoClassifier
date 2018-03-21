@@ -10,7 +10,7 @@ from ClassifierManager import ClassifierManager
 from tornado import websocket
 
 # Multithreaded implementation of classifier server
-class ClassifierHTTPServer(socketserver.ThreadingMixIn, HTTPServer):
+class ExpertSystemController(socketserver.ThreadingMixIn, HTTPServer):
                 
     # Handler class for incoming HTTP requests
     class ClassifierHTTPHandler(BaseHTTPRequestHandler):
@@ -165,23 +165,26 @@ class ClassifierHTTPServer(socketserver.ThreadingMixIn, HTTPServer):
 
         
 #### MAIN ####
+
+
 if __name__ == '__main__':
 
     # Define the port numbers
-    HOST, HTTP_PORT, SOCKET_PORT = "", 8080, 8081
+    HOST, HTTP_PORT = "", 8080
     
     # Make sure exactly one argument is supplied
     if (len(sys.argv) == 2):
         
-        # Server http server on defined address and port, with specified request handler
-        httpServer = ClassifierHTTPServer((HOST, HTTP_PORT), ClassifierHTTPServer.ClassifierHTTPHandler);
+        # Expert system controller listening on defined address and port, with specified request handler
+        expertSystemController = ExpertSystemController((HOST, HTTP_PORT), ExpertSystemController.ClassifierHTTPHandler);
         
         # Classifier manager for server to classifier communication
         classifierManager = ClassifierManager(0.3)
+        accountManager = AccountManager()
         
         # Log message and start listening
         print("Starting HTTP server listening on port", HTTP_PORT)
-        httpServer.serve_forever()
+        expertSystemController.serve_forever()
     else:
         # Print usage info
         print("Usage: python3 TensorServer.py (model_number)");
