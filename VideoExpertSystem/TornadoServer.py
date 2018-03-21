@@ -19,8 +19,12 @@ class ClassifierServer():
             (r'/ws', ClassifierServer.ClassifierWebSocketHandler),
             (r'/classify', ClassifierServer.ClassifierGETHandler),
             (r'/favicon.ico', ClassifierServer.ClassifierGETHandler),
+            (r'/', ClassifierServer.ClassifierGETHandler),
             (r'/js/(.*)', tornado.web.StaticFileHandler, {"path": "./js"},),
             (r'/css/(.*)', tornado.web.StaticFileHandler, {"path": "./css"},),
+            (r'/dist/(.*)', tornado.web.StaticFileHandler, {"path": "./dist"},),
+            (r'/lib/(.*)', tornado.web.StaticFileHandler, {"path": "./lib"},),
+            (r'/vendor/(.*)', tornado.web.StaticFileHandler, {"path": "./vendor"},),
         ])
         
         # Initiate tornado http server w/application
@@ -51,13 +55,16 @@ class ClassifierServer():
     # Handle requests for specific files
     class ClassifierGETHandler(tornado.web.RequestHandler):
         def get(self):
-            if self.request.uri == "/classify":
+            if self.request.uri == "/":
+                self.render('html/index.html')
+            elif self.request.uri == "/classify":
                 self.render('html/classify.html')                    
             elif self.request.uri == "/favicon.ico":
                 with open('resources/favicon.ico', 'rb') as iconFile:
                     self.write(iconFile.read())
             else:
                 print("Unrecognized GET:", self.request.uri)
+                self.write("404")
                 
         
     # Handler for web socket events
