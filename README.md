@@ -40,7 +40,16 @@ The Video Expert System (will) incorporate TensorFlow's machine learning capabil
 
 **Disclaimer:** The `VideoExpertSystem/tf_scripts` folder is sourced from the official TensorFlow repo. It contains helper scripts for training and classifying, and is provided within for convenience, to avoid having to clone the entire repository. 
 
+#### Instructions for Training RNN LSTM Models
 
+1. Clone the repository to your local machine.
+2. Copy the training video frames onto the `VideoExpertSystem/Models/tf_files-v{1.0}/rnn/dataset` directory.
+3. Open a Python 3 interactive shell on the `VideoExpertSystem` directory.
+4. Run `from Trainer import RNNTrainer` to import the RNNTrainer class.
+5. Run `trainer = RNNTrainer({labels}{model_version})` with the appropriate parameters to initialize an instance of the trainer.
+6. Run `trainer.autoTrain()` to start the entire data processing and training process.
+
+**Note**: The training process may take extremely long time periods depending on the size of your dataset. It is recommended to run on powerful machines with an optimized version of TensorFlow.
 
 
 
