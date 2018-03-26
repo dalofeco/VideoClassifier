@@ -2,8 +2,8 @@ import sys
 
 NORMAL = 0;
 SHOOTING = 1;
-ROBBERY = 2;
-EXPLOSION = 3;
+EXPLOSION = 2;
+ROBBERY = 3;
 FIGHTING = 4;
 
 def labelToNum(label):

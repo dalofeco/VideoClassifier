@@ -20,7 +20,7 @@ import Categories
 class Trainer():
     
     # Constructor for Trainer base class
-    def __init__():
+    def __init__(self, modelVersion):
         
         # Initialize as class variables
         self.tf_files_dir = "../Models/tf_files-v{0}/".format(modelVersion)
@@ -52,7 +52,7 @@ class Trainer():
                 train_writer.flush()
                 train_writer.close()
 
-    print("Now run: 'tensorboard --logdir [PATH-TO-LOG-FILE]")
+        print("Now run: 'tensorboard --logdir [PATH-TO-LOG-FILE]")
 
 # Class for training CNN layer
 class CNNTrainer(Trainer):
@@ -78,12 +78,12 @@ class CNNTrainer(Trainer):
         
         bottleneck_dir = self.tf_files_dir + 'bottlenecks/'
         model_dir = self.tf_files_dir + 'models/'
-        summaries_dir = self.tf_files_dir + 'training_summaries.tb
+        summaries_dir = self.tf_files_dir + 'training_summaries.tb'
         output_graph_dir = self.tf_files_dir + 'retrained_graph.pb'
         output_labels_dir = self.tf_files_dir + 'retrained_labels.txt'
         
         # Very nsecure, replace with safer bridge
-        os.system('python3 -m tf_scripts.retrain --bottleneck_dir=' + bottleneck_dir + ' --how_many_training_steps=' + str(training_steps) + ' --model_dir=' + model_dir + ' --sumarries_dir=' + summaries_dir + ' --output_graph=' + output_graph_dir + ' --output_labels=' + output_labels_dir + ' --architecture=' + architecture + ' --image_dir=' + self.dataset_dir);
+        os.system('python -m tf_scripts.retrain --bottleneck_dir=' + bottleneck_dir + ' --how_many_training_steps=' + str(training_steps) + ' --model_dir=' + model_dir + ' --sumarries_dir=' + summaries_dir + ' --output_graph=' + output_graph_dir + ' --output_labels=' + output_labels_dir + ' --architecture=' + architecture + ' --image_dir=' + self.dataset_dir);
         
         # Log time performance details
         elapsedTime = time.time() - start;
@@ -100,7 +100,7 @@ class RNNTrainer(Trainer):
     def __init__(self, labels, modelVersion):
         
         # Initialize superclass constructor
-        super().__init__()
+        super().__init__(modelVersion)
          # Initializes the following
         # self.tf_files_dir
         # self.modelVersion
@@ -300,12 +300,10 @@ class RNNTrainer(Trainer):
         # Reshape to dimensions, with batches of defined input length
         X = X.reshape(datasetLength, frameBatchLength, self.INPUT_LENGTH)
         
-        print("X and X Shape:")
-        print(X)
+        print("X Shape:")
         print(X.shape)
 
-        print("Y and Y Shape:")
-        print(y)
+        print("Y Shape:")
         print(y.shape)
         
         # One-hot encoded categoricals.
@@ -338,18 +336,21 @@ class RNNTrainer(Trainer):
         # Training checkpoints
         CHECKPOINT_PATH = self.tf_files_dir + "rnn-checkpoints/"
         
+        # Model output dir
+        MODEL_OUTPUT_DIR = self.tf_files_dir + "lstm-model.pb";
+        
         # Image lookback
         frames_lookback = 16
         
         # Define training parameters
         num_epochs = 4
-        total_series_length = 50000 # FIX THIS
+        # total_series_length = 50000 # FIX THIS
         truncated_backprop_length = 16
         state_size = 2048
         num_classes = len(self.labels)
         echo_step = 3
         batch_size = 8
-        num_batches = total_series_length//batch_size//truncated_backprop_length
+        # num_batches = total_series_length//batch_size//truncated_backprop_length
         
         # Define X batch placeholder
         X_batch_ph = tf.placeholder(tf.float32, [batch_size, truncated_backprop_length, self.INPUT_LENGTH])
@@ -395,6 +396,12 @@ class RNNTrainer(Trainer):
         # Define training step optimizer to minimize loss function
         train_step = tf.train.AdagradOptimizer(0.3).minimize(total_loss)
         
+        # Initialize saver with all vars and ops
+        saver = tf.train.Saver();
+        
+        # Initialize start time
+        startTime = time.time();
+                
         print("Initiating TensorFlow Session...")
         
         # INITIALIZE SESSION
@@ -412,7 +419,7 @@ class RNNTrainer(Trainer):
             loss_list = []
             
             # Repeat for each epoch
-            for epoch_idx in range(num_epochs):
+            for epoch_idx in range(0, num_epochs):
                 
                 print("Loading Data for Epoch", epoch_idx)
                 
@@ -457,7 +464,17 @@ class RNNTrainer(Trainer):
                         self.plotProgress(loss_list, _predictions_series, batchX, batchY, truncated_backprop_length)
                         
                 print("Epoch ", epoch_idx, " completed.")
-                    
+                
+                # Save the epoch as a checkpoint
+                saver.save(CHECKPOINT_PATH + "rnn-epoch-{}.pb".format(epoch_idx));
+                print("Finished epoch #{0} in {1}".format(datetime.timedelta(seconds=time.time() - startTime)))
+                
+            # Save the finalized model
+            save_path = saver.save(MODEL_OUTPUT_DIR);
+            print("Saved RNN model to: {}".format(save_path));
+            
+            # Print elapsed time
+            print("Finished traning process in {0}".format(datetime.timedelta(seconds=time.time() - startTime)))
         
     # Attempt to create dir        
     def plotProgress(self, loss_list, predictions_series, batchX, batchY, truncated_backprop_length):
