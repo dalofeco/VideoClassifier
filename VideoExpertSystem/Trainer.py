@@ -3,7 +3,6 @@ from tensorflow.python.platform import gfile
 from tf_scripts import retrain as tf_retrain
 from sklearn.model_selection import train_test_split
 from tflearn.data_utils import to_categorical
-import matplotlib.pyplot as plt
 
 import tflearn
 import numpy as np
@@ -38,7 +37,6 @@ class Trainer():
     def extractTBfromGraph(self):
 
         LOGDIR = self.tf_files_dir + "/"
-        
         
         with tf.Session() as sess:
             model_filename ='../Models/tf_files-v0.3/retrained_graph.pb'
@@ -328,7 +326,7 @@ class RNNTrainer(Trainer):
     def train(self):
         
         # Log
-        print("Initiating RNN training...")
+        print("Initiating LSTM training...")
         
         # Performance metrics
         start = time.time();
@@ -338,6 +336,9 @@ class RNNTrainer(Trainer):
         
         # Model output dir
         MODEL_OUTPUT_DIR = self.tf_files_dir + "lstm-model.pb";
+        
+        # TensorBoard log dir
+        TB_LOG_DIR = self.tf_files_dir + "rnn-logs/";
         
         # Image lookback
         frames_lookback = 16
@@ -365,11 +366,17 @@ class RNNTrainer(Trainer):
         # Define init state for LSTM cell
         init_state = tf.nn.rnn_cell.LSTMStateTuple(cell_state_ph, hidden_state_ph)
         
-        # Initialize weight variable tensors with random data
-        W = tf.Variable(np.random.rand(state_size, num_classes), dtype=tf.float32)
-        
-        # Initialize bias variable tensors with zeroes
-        b = tf.Variable(np.zeros((1, num_classes)), dtype=tf.float32)
+        with tf.name_scope('weights'):
+            # Initialize weight variable tensors with random data
+            W = tf.Variable(np.random.rand(state_size, num_classes), dtype=tf.float32)
+            # Define variable summaries for TensorBoard
+            variable_summaries(W)
+            
+        with tf.name_scope('bias'):
+            # Initialize bias variable tensors with zeroes
+            b = tf.Variable(np.zeros((1, num_classes)), dtype=tf.float32)
+            # Define variable summaries for TensorBoard
+            variable_summaries(b)
         
         # Define input series and labels series
         inputs_series = tf.unstack(X_batch_ph, axis=1)
@@ -387,9 +394,13 @@ class RNNTrainer(Trainer):
         # Define softmax layer for one-hot encoding of output classification
         predictions_series = [tf.nn.softmax(logits) for logits in logits_series]
         
-        # Define losses function
-        losses = [tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels) for logits, labels in zip(logits_series, labels_series)]
-        
+        with tf.name_scope("loss"):
+            # Define losses function
+            losses = [tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels) for logits, labels in zip(logits_series, labels_series)]
+
+            # Define variable summaries for losses
+            variable_summaries(losses)
+            
         # Define total loss function
         total_loss = tf.reduce_mean(losses)
         
@@ -407,16 +418,17 @@ class RNNTrainer(Trainer):
         # INITIALIZE SESSION
         with tf.Session() as sess:
             
+            # Start TensorBoard logger
+            tbFileWriter = tf.summary.FileWriter(TB_LOG_DIR, self.sess.);
+            
             # Initialize all variables
             sess.run(tf.global_variables_initializer())
-            
-            # Graphing
-            plt.ion()
-            plt.figure()
-            plt.show()
         
             # Define list to keep track of loss
             loss_list = []
+            
+            # Define counter for tensorboard
+            counter = 0
             
             # Repeat for each epoch
             for epoch_idx in range(0, num_epochs):
@@ -443,8 +455,11 @@ class RNNTrainer(Trainer):
                     batchX = x[start_idx:end_idx,:,:]
                     batchY = y[start_idx:end_idx,:]
                     
+                    # TB merge
+                    merge = tf.sumarry.merge_all()
+                    
                     # Run the training session
-                    _total_loss, _train_step, _current_state, _predictions_series = sess.run([total_loss, train_step, current_state, predictions_series], 
+                    summary, _total_loss, _train_step, _current_state, _predictions_series = sess.run([total_loss, train_step, current_state, predictions_series], 
                                                                                              feed_dict={
                                                                                                  X_batch_ph: batchX,
                                                                                                  y_batch_ph: batchY,
@@ -457,6 +472,10 @@ class RNNTrainer(Trainer):
 
                     # Keep track of total loss by appending to local list
                     loss_list.append(_total_loss)
+                    
+                    # Write out tensorboard summary and update the counter
+                    tbFileWriter.add_summary(summary, counter)
+                    counter += 1;
 
                     # Log training messages every 2%
                     if batch_idx % (num_batches // 50) == 0:
@@ -473,48 +492,68 @@ class RNNTrainer(Trainer):
             save_path = saver.save(MODEL_OUTPUT_DIR);
             print("Saved RNN model to: {}".format(save_path));
             
-            # Print elapsed time
-            print("Finished traning process in {0}".format(datetime.timedelta(seconds=time.time() - startTime)))
+            # Save TensorBoard logs
+            
+        # Print elapsed time
+        print("Finished traning process in {0}".format(datetime.timedelta(seconds=time.time() - startTime)))
+    
+#
+# Define variable summaries for TensorBoard
+#   
+def variable_summaries(var):
+    """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
+    with tf.name_scope('summaries'):
+    mean = tf.reduce_mean(var)
+    tf.summary.scalar('mean', mean)
+    with tf.name_scope('stddev'):
+        stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
+    tf.summary.scalar('stddev', stddev)
+    tf.summary.scalar('max', tf.reduce_max(var))
+    tf.summary.scalar('min', tf.reduce_min(var))
+    tf.summary.histogram('histogram', var)
+            
         
-    # Attempt to create dir        
-    def plotProgress(self, loss_list, predictions_series, batchX, batchY, truncated_backprop_length):
-        plt.subplot(2, 3, 1)
-        plt.cla()
-        plt.plot(loss_list)
-
-        for batch_series_idx in range(5):
-            
-            # Transform predictions_series to a one hot encoded series
-            one_hot_output_series = np.array(predictions_series)[:, batch_series_idx, :]
-            single_output_series = np.array([(1 if out[0] < 0.5 else 0) for out in one_hot_output_series])
-
-            # Create subplot
-            plt.subplot(2, 3, batch_series_idx + 2)
-            plt.cla()
-            
-            # Define plot axis [Xmin, Xmax, Ymin, Ymax]
-            plt.axis([0, truncated_backprop_length, 0, 2])
-            left_offset = range(truncated_backprop_length)
-            
-            # Compute mean for frame features in batch
-            frameBatchMeans = np.array([np.mean(frame) for frame in batchX[batch_series_idx,:,:]])
-            
-            # Convert discrete categories to numbered
-            encodedCategories = []
-            for i, categoryActive in enumerate(batchY[batch_series_idx]):
-                if categoryActive:
-                    encodedCategories.append(i+1)
-                    
-            encodedCategories = np.array(encodedCategories)
-            
-            # encodedCategories = np.array([(Categories.NORMAL+1 if category[0] else Categories.SHOOTING+1) for category in batchY[batch_series_idx]])
-            
-            plt.bar(left_offset, frameBatchMeans, width=1, color="blue")
-            plt.bar(left_offset, encodedCategories * 0.5, width=1, color="red")
-            plt.bar(left_offset, single_output_series * 0.3, width=1, color="green")
-
-        plt.draw()
-        plt.pause(0.0001)
+        
+        
+#    # Attempt to create dir 
+#    def plotProgress(self, loss_list, predictions_series, batchX, batchY, truncated_backprop_length):
+#        plt.subplot(2, 3, 1)
+#        plt.cla()
+#        plt.plot(loss_list)
+#
+#        for batch_series_idx in range(5):
+#            
+#            # Transform predictions_series to a one hot encoded series
+#            one_hot_output_series = np.array(predictions_series)[:, batch_series_idx, :]
+#            single_output_series = np.array([(1 if out[0] < 0.5 else 0) for out in one_hot_output_series])
+#
+#            # Create subplot
+#            plt.subplot(2, 3, batch_series_idx + 2)
+#            plt.cla()
+#            
+#            # Define plot axis [Xmin, Xmax, Ymin, Ymax]
+#            plt.axis([0, truncated_backprop_length, 0, 2])
+#            left_offset = range(truncated_backprop_length)
+#            
+#            # Compute mean for frame features in batch
+#            frameBatchMeans = np.array([np.mean(frame) for frame in batchX[batch_series_idx,:,:]])
+#            
+#            # Convert discrete categories to numbered
+#            encodedCategories = []
+#            for i, categoryActive in enumerate(batchY[batch_series_idx]):
+#                if categoryActive:
+#                    encodedCategories.append(i+1)
+#                    
+#            encodedCategories = np.array(encodedCategories)
+#            
+#            # encodedCategories = np.array([(Categories.NORMAL+1 if category[0] else Categories.SHOOTING+1) for category in batchY[batch_series_idx]])
+#            
+#            plt.bar(left_offset, frameBatchMeans, width=1, color="blue")
+#            plt.bar(left_offset, encodedCategories * 0.5, width=1, color="red")
+#            plt.bar(left_offset, single_output_series * 0.3, width=1, color="green")
+#
+#        plt.draw()
+#        plt.pause(0.0001)
 
 
 # Example RNN training
