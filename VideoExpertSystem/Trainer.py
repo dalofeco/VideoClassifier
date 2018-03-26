@@ -459,7 +459,7 @@ class RNNTrainer(Trainer):
                     merge = tf.summary.merge_all()
                     
                     # Run the training session
-                    summary, _total_loss, _train_step, _current_state, _predictions_series = sess.run([total_loss, train_step, current_state, predictions_series], 
+                    summary, _total_loss, _train_step, _current_state, _predictions_series = sess.run([merge, total_loss, train_step, current_state, predictions_series], 
                                                                                              feed_dict={
                                                                                                  X_batch_ph: batchX,
                                                                                                  y_batch_ph: batchY,
@@ -480,16 +480,16 @@ class RNNTrainer(Trainer):
                     # Log training messages every 2%
                     if batch_idx % (num_batches // 50) == 0:
                         print("Step",batch_idx, "out of", num_batches,  "- Batch loss: ", _total_loss)
-                        self.plotProgress(loss_list, _predictions_series, batchX, batchY, truncated_backprop_length)
+                        #self.plotProgress(loss_list, _predictions_series, batchX, batchY, truncated_backprop_length)
                         
                 print("Epoch ", epoch_idx, " completed.")
                 
                 # Save the epoch as a checkpoint
-                saver.save(CHECKPOINT_PATH + "rnn-epoch-{}.pb".format(epoch_idx));
+                saver.save(sess, CHECKPOINT_PATH + "rnn-epoch-{}.pb".format(epoch_idx));
                 print("Finished epoch #{0} in {1}".format(datetime.timedelta(seconds=time.time() - startTime)))
                 
             # Save the finalized model
-            save_path = saver.save(MODEL_OUTPUT_DIR);
+            save_path = saver.save(sess, MODEL_OUTPUT_DIR);
             print("Saved RNN model to: {}".format(save_path));
             
             # Save TensorBoard logs
