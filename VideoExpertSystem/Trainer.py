@@ -456,7 +456,7 @@ class RNNTrainer(Trainer):
                     batchY = y[start_idx:end_idx,:]
                     
                     # TB merge
-                    merge = tf.sumarry.merge_all()
+                    merge = tf.summary.merge_all()
                     
                     # Run the training session
                     summary, _total_loss, _train_step, _current_state, _predictions_series = sess.run([total_loss, train_step, current_state, predictions_series], 
