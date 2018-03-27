@@ -1,0 +1,11 @@
+1. Install Python 3.5.4 (v-3.5.X)
+2. Through PIP, install:
+	- numpy
+	- scipy
+	- tornado
+	- scikit-learn
+    - tflearn
+    - tensorflow 1.6
+    - matplotlib
+	- tqdm
+3. [Optional] Install TensorFlow GPU version or CPU optimized binary.
