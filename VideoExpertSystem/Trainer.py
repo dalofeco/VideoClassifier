@@ -480,7 +480,6 @@ class RNNTrainer(Trainer):
                     # Log training messages every 2%
                     if batch_idx % (num_batches // 50) == 0:
                         print("Step",batch_idx, "out of", num_batches,  "- Batch loss: ", _total_loss)
-                        #self.plotProgress(loss_list, _predictions_series, batchX, batchY, truncated_backprop_length)
                         
                 print("Epoch ", epoch_idx, " completed.")
                 
@@ -491,8 +490,6 @@ class RNNTrainer(Trainer):
             # Save the finalized model
             save_path = saver.save(sess, MODEL_OUTPUT_DIR);
             print("Saved RNN model to: {}".format(save_path));
-            
-            # Save TensorBoard logs
             
         # Print elapsed time
         print("Finished traning process in {0}".format(datetime.timedelta(seconds=time.time() - startTime)))
@@ -514,48 +511,6 @@ def variable_summaries(var):
         tf.summary.scalar('min', tf.reduce_min(var))
         tf.summary.histogram('histogram', var)
             
-        
-        
-        
-#    # Attempt to create dir 
-#    def plotProgress(self, loss_list, predictions_series, batchX, batchY, truncated_backprop_length):
-#        plt.subplot(2, 3, 1)
-#        plt.cla()
-#        plt.plot(loss_list)
-#
-#        for batch_series_idx in range(5):
-#            
-#            # Transform predictions_series to a one hot encoded series
-#            one_hot_output_series = np.array(predictions_series)[:, batch_series_idx, :]
-#            single_output_series = np.array([(1 if out[0] < 0.5 else 0) for out in one_hot_output_series])
-#
-#            # Create subplot
-#            plt.subplot(2, 3, batch_series_idx + 2)
-#            plt.cla()
-#            
-#            # Define plot axis [Xmin, Xmax, Ymin, Ymax]
-#            plt.axis([0, truncated_backprop_length, 0, 2])
-#            left_offset = range(truncated_backprop_length)
-#            
-#            # Compute mean for frame features in batch
-#            frameBatchMeans = np.array([np.mean(frame) for frame in batchX[batch_series_idx,:,:]])
-#            
-#            # Convert discrete categories to numbered
-#            encodedCategories = []
-#            for i, categoryActive in enumerate(batchY[batch_series_idx]):
-#                if categoryActive:
-#                    encodedCategories.append(i+1)
-#                    
-#            encodedCategories = np.array(encodedCategories)
-#            
-#            # encodedCategories = np.array([(Categories.NORMAL+1 if category[0] else Categories.SHOOTING+1) for category in batchY[batch_series_idx]])
-#            
-#            plt.bar(left_offset, frameBatchMeans, width=1, color="blue")
-#            plt.bar(left_offset, encodedCategories * 0.5, width=1, color="red")
-#            plt.bar(left_offset, single_output_series * 0.3, width=1, color="green")
-#
-#        plt.draw()
-#        plt.pause(0.0001)
 
 
 # Example RNN training

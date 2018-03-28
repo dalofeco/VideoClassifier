@@ -21,7 +21,33 @@
     <link href="/vendor/morrisjs/morris.css" rel="stylesheet">
     <link rel="stylesheet" href="/lib/device-mockups/device-mockups.min.css">
     <!-- Custom Fonts -->
-    <link href="/vendor/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+    <script defer src="https://use.fontawesome.com/releases/v5.0.9/js/all.js" integrity="sha384-8iPTk2s/jMVj81dnzb/iFR2sdA7u06vHJyyLlAd4snFpCl/SnyUjRrbdJsw1pGIl" crossorigin="anonymous"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/index.css">
+    
+    
+    <!-- JavaScript Dependencies>
+    <!-- jQuery -->
+    <script src="/vendor/jquery/jquery.min.js"></script>
+
+    <!-- Bootstrap Core JavaScript -->
+    <script src="/vendor/bootstrap/js/bootstrap.min.js"></script>
+
+    <!-- Metis Menu Plugin JavaScript -->
+    <script src="/vendor/metisMenu/metisMenu.min.js"></script>
+
+    <!-- Morris Charts JavaScript -->
+    <script src="/vendor/raphael/raphael.min.js"></script>
+    <script src="/vendor/morrisjs/morris.min.js"></script>
+
+    <!-- Custom Theme JavaScript -->
+    <script src="/dist/js/sb-admin-2.js"></script>
+
+	<script type="text/javascript" src="/js/index.js"></script>
+    <!-- End of JS-->
+
+
 
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -305,7 +331,9 @@
                 <div class="col-lg-8">
                     <div class="panel panel-default">
                         <div class="panel-heading">
-                            <i class="fa fa-bar-chart-o fa-fw"></i>Live Stream Preview<div class="pull-right">
+                            <i class="fa fa-bar-chart-o fa-fw"></i>Live Stream Preview
+                            
+                            <div class="pull-right">
                                 <div class="btn-group">
                                     <button type="button" class="btn btn-default btn-xs dropdown-toggle" data-toggle="dropdown">
                                         Actions
@@ -323,17 +351,34 @@
                                         </li>
                                     </ul>
                                 </div>
+                                <button id="webcamButton" class="btn btn-sm">
+                                    <i class="fas fa-video" id="webcamButton"></i>
+                                </button>
                             </div>
                         </div>
                         <!-- /.panel-heading -->
                         <div class="panel-body">
-                            <video id="videoPlayer" autoplay="true" src="">
-						No video support in your browser
-					</video>
-                    <button id="webcamButton">Start Webcam</button>
-                    <input type="file" accept="video/*" id="videoFilePicker">
-                    <button id="classifyButton">CLASSIFY</button>
-                    <p id="results"></p>
+                            <div class="row">
+                                <div id="videoPlayerContainer" class="col-sm-12" align="center">
+                                    <video id="videoPlayer" autoplay="true" src="" controls>No video support in your browser</video>
+                                </div>
+                            </div>
+                            <div class="row">
+                                
+                                <div class="col-sm-8" align="center">
+                                    <input class="btn btn-primary" type="file" accept="video/*" id="videoFilePicker">
+                                </div>
+                                <div class="col-sm-4" align="center">
+                                    <button class="btn btn-primary" id="classifyButton">Classify</button>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-sm-4"></div>
+                                <div class="col-sm-4" align="center">
+                                    <p id="results"></p>
+                                </div>
+                                <div class="col-sm-4"></div>
+                            </div>
                         </div>
                         <!-- /.panel-body -->
                     </div>
@@ -461,25 +506,5 @@
 
     </div>
     <!-- /#wrapper -->
-
-    <!-- jQuery -->
-    <script src="/vendor/jquery/jquery.min.js"></script>
-
-    <!-- Bootstrap Core JavaScript -->
-    <script src="/vendor/bootstrap/js/bootstrap.min.js"></script>
-
-    <!-- Metis Menu Plugin JavaScript -->
-    <script src="/vendor/metisMenu/metisMenu.min.js"></script>
-
-    <!-- Morris Charts JavaScript -->
-    <script src="/vendor/raphael/raphael.min.js"></script>
-    <script src="/vendor/morrisjs/morris.min.js"></script>
-
-    <!-- Custom Theme JavaScript -->
-    <script src="/dist/js/sb-admin-2.js"></script>
-
-	<script type="text/javascript" src="/js/index.js"></script>
-
-
-
-</body></html>
+</body>
+</html>
