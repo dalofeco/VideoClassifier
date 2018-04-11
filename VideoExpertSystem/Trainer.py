@@ -350,18 +350,18 @@ class RNNTrainer(Trainer):
         state_size = 2048
         num_classes = len(self.labels)
         echo_step = 3
-        # batch_size = 8
+        batch_size = 1
         # num_batches = total_series_length//batch_size//sequence_length
         
         # Define X batch placeholder
-        X_batch_ph = tf.placeholder(tf.float32, [1, sequence_length, self.INPUT_LENGTH], name="x_input")
+        X_batch_ph = tf.placeholder(tf.float32, [batch_size, sequence_length, self.INPUT_LENGTH], name="x_input")
         
         # Y batch has batch_size elements, with categories for each backprop frame
-        y_batch_ph = tf.placeholder(tf.int32, [1, num_classes], name="y_output")
+        y_batch_ph = tf.placeholder(tf.int32, [batch_size, num_classes], name="y_output")
         
         # Define cell and hidden state
-        cell_state_ph = tf. placeholder(tf.float32, [1, state_size])
-        hidden_state_ph = tf.placeholder(tf.float32, [1, state_size])
+        cell_state_ph = tf. placeholder(tf.float32, [batch_size, state_size])
+        hidden_state_ph = tf.placeholder(tf.float32, [batch_size, state_size])
         
         # Define init state for LSTM cell
         init_state = tf.nn.rnn_cell.LSTMStateTuple(cell_state_ph, hidden_state_ph)
@@ -381,6 +381,10 @@ class RNNTrainer(Trainer):
         # Define input series and labels series
         inputs_series = tf.unstack(X_batch_ph, axis=1)
         labels_series = tf.unstack(y_batch_ph, axis=1)
+        
+        # Verbose logging
+        print("Inputs shape:" + str(tf.shape(inputs_series)))
+        print("Labels shape": + str(tf.shape(labels_series)))
         
         # Define LSTM cell
         cell = tf.nn.rnn_cell.BasicLSTMCell(state_size, state_is_tuple=True)
