@@ -339,22 +339,29 @@ class RNNTrainer(Trainer):
         
         # TensorBoard log dir
         TB_LOG_DIR = self.tf_files_dir + "rnn-logs/";
+
         
-        # Image lookback
-        frames_lookback = 16
+        # DEFINE LSTM RNN OPTIONS
         
-        # Define training parameters
-        num_epochs = 4
+        # Number of epochs to train for
+        num_epochs = 3
+        
         # total_series_length = 50000 # FIX THIS
-        sequence_length = 16
+        
+        # Frames lookback length
+        truncated_backprop_length = 30
+        
+        # Define state size
         state_size = 2048
+        
+        # Define the num of classification classes
         num_classes = len(self.labels)
-        echo_step = 3
+        
+        # Size of the batch
         batch_size = 1
-        # num_batches = total_series_length//batch_size//sequence_length
         
         # Define X batch placeholder
-        X_batch_ph = tf.placeholder(tf.float32, [batch_size, sequence_length, self.INPUT_LENGTH], name="x_input")
+        X_batch_ph = tf.placeholder(tf.float32, [batch_size, truncated_backprop_length, self.INPUT_LENGTH], name="sequence_input")
         
         # Y batch has batch_size elements, with categories for each backprop frame
         y_batch_ph = tf.placeholder(tf.int32, [batch_size, num_classes], name="y_output")
@@ -374,17 +381,13 @@ class RNNTrainer(Trainer):
             
         with tf.name_scope('bias'):
             # Initialize bias variable tensors with zeroes
-            b = tf.Variable(np.zeros((1, num_classes)), dtype=tf.float32)
+            b = tf.Variable(np.zeros((1 , num_classes)), dtype=tf.float32)
             # Define variable summaries for TensorBoard
             variable_summaries(b)
         
-        # Define input series and labels series
+        # Define input series and labels series as unstacking of X and Y placeholders
         inputs_series = tf.unstack(X_batch_ph, axis=1)
         labels_series = tf.unstack(y_batch_ph, axis=1)
-        
-        # Verbose logging
-        print("Inputs shape:" + str(tf.shape(inputs_series)))
-        print("Labels shape:" + str(tf.shape(labels_series)))
         
         # Define LSTM cell
         cell = tf.nn.rnn_cell.BasicLSTMCell(state_size, state_is_tuple=True)
@@ -395,7 +398,7 @@ class RNNTrainer(Trainer):
         # Define the logits fully connected layer   
         logits_series = [tf.matmul(state, W) + b for state in states_series]
         
-        # Define name for op
+        # Define name for prediction op
         with tf.name_scope("predictions_series"):
 
             # Define softmax layer for one-hot encoding of output classification
@@ -444,7 +447,7 @@ class RNNTrainer(Trainer):
                 print("Loading Data for Epoch", epoch_idx)
                 
                 # Read the X and Y data
-                x,y = self.readFeatures(sequence_length)
+                x,y = self.readFeatures(truncated_backprop_length)
                 
                 # Calculate number of batches 
                 num_batches = len(x) // batch_size
