@@ -384,7 +384,7 @@ class RNNTrainer(Trainer):
         
         # Verbose logging
         print("Inputs shape:" + str(tf.shape(inputs_series)))
-        print("Labels shape": + str(tf.shape(labels_series)))
+        print("Labels shape:" + str(tf.shape(labels_series)))
         
         # Define LSTM cell
         cell = tf.nn.rnn_cell.BasicLSTMCell(state_size, state_is_tuple=True)
