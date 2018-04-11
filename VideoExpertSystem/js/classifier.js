@@ -114,14 +114,19 @@ function startAnalysis() {
                     frames.push(frameData['blob'])
                     frameCount++
                     console.log("Adding frame to frames")
+                    
+                    // Send frames when count is 16
+                    if (frames.length == 16) {
+                        sendFramesForclassification(Date.now())
+                    }
                 })
             }, FRAME_TIME_INTERVAL)    
 
-            // Send request every defined interval 
-            requestInterval = setInterval(function() {
-                startTime = Date.now()
-                sendFramesForClassification(startTime)
-            }, SEND_TIME_INTERVAL)    
+//            // Send request every defined interval 
+//            requestInterval = setInterval(function() {
+//                startTime = Date.now()
+//                sendFramesForClassification(startTime)
+//            }, SEND_TIME_INTERVAL)    
 
         }) 
         

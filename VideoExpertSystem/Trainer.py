@@ -39,7 +39,7 @@ class Trainer():
         LOGDIR = self.tf_files_dir + "/"
         
         with tf.Session() as sess:
-            model_filename ='../Models/tf_files-v0.3/retrained_graph.pb'
+            model_filename = self.tf_files_dir + '/retrained_graph.pb'
             with gfile.FastGFile(model_filename, 'rb') as f:
                 graph_def = tf.GraphDef()
                 graph_def.ParseFromString(f.read())
@@ -233,7 +233,7 @@ class RNNTrainer(Trainer):
             num_categories += 1;
 
             # List video features files
-            videosFeatures = os.listdir(self.features_dir + '/' + category);
+            videosFeatures = os.listdir(self.features_dir + category);
             
             # Progress bar and start time for performance metrics
             pbar = tqdm(total=len(videosFeatures))
@@ -243,7 +243,7 @@ class RNNTrainer(Trainer):
             for videoFeatures in videosFeatures:
 
                 # Define full path for video features
-                videoFeaturesPath = self.features_dir + '/' + category + '/' + videoFeatures
+                videoFeaturesPath = self.features_dir + category + '/' + videoFeatures
                 
                 # Declaration for scoping reasons
                 actualLabel = "";
@@ -335,7 +335,7 @@ class RNNTrainer(Trainer):
         CHECKPOINT_PATH = self.tf_files_dir + "rnn-checkpoints/"
         
         # Model output dir
-        MODEL_OUTPUT_DIR = self.tf_files_dir + "lstm-model.pb";
+        MODEL_OUTPUT_DIR = self.tf_files_dir + "rnn-model/";
         
         # TensorBoard log dir
         TB_LOG_DIR = self.tf_files_dir + "rnn-logs/";
@@ -346,22 +346,22 @@ class RNNTrainer(Trainer):
         # Define training parameters
         num_epochs = 4
         # total_series_length = 50000 # FIX THIS
-        truncated_backprop_length = 16
+        sequence_length = 16
         state_size = 2048
         num_classes = len(self.labels)
         echo_step = 3
-        batch_size = 8
-        # num_batches = total_series_length//batch_size//truncated_backprop_length
+        # batch_size = 8
+        # num_batches = total_series_length//batch_size//sequence_length
         
         # Define X batch placeholder
-        X_batch_ph = tf.placeholder(tf.float32, [batch_size, truncated_backprop_length, self.INPUT_LENGTH])
+        X_batch_ph = tf.placeholder(tf.float32, [1, sequence_length, self.INPUT_LENGTH], name="x_input")
         
         # Y batch has batch_size elements, with categories for each backprop frame
-        y_batch_ph = tf.placeholder(tf.int32, [batch_size, num_classes])
+        y_batch_ph = tf.placeholder(tf.int32, [1, num_classes], name="y_output")
         
         # Define cell and hidden state
-        cell_state_ph = tf.placeholder(tf.float32, [batch_size, state_size])
-        hidden_state_ph = tf.placeholder(tf.float32, [batch_size, state_size])
+        cell_state_ph = tf. placeholder(tf.float32, [1, state_size])
+        hidden_state_ph = tf.placeholder(tf.float32, [1, state_size])
         
         # Define init state for LSTM cell
         init_state = tf.nn.rnn_cell.LSTMStateTuple(cell_state_ph, hidden_state_ph)
@@ -391,9 +391,13 @@ class RNNTrainer(Trainer):
         # Define the logits fully connected layer   
         logits_series = [tf.matmul(state, W) + b for state in states_series]
         
-        # Define softmax layer for one-hot encoding of output classification
-        predictions_series = [tf.nn.softmax(logits) for logits in logits_series]
+        # Define name for op
+        with tf.name_scope("predictions_series"):
+
+            # Define softmax layer for one-hot encoding of output classification
+            predictions_series = [tf.nn.softmax(logits) for logits in logits_series]
         
+        # Define name scope for ops
         with tf.name_scope("loss"):
             # Define losses function
             losses = [tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels) for logits, labels in zip(logits_series, labels_series)]
@@ -436,7 +440,7 @@ class RNNTrainer(Trainer):
                 print("Loading Data for Epoch", epoch_idx)
                 
                 # Read the X and Y data
-                x,y = self.readFeatures(truncated_backprop_length)
+                x,y = self.readFeatures(sequence_length)
                 
                 # Calculate number of batches 
                 num_batches = len(x) // batch_size
@@ -483,12 +487,26 @@ class RNNTrainer(Trainer):
                         
                 print("Epoch ", epoch_idx, " completed.")
                 
+                # Define the save path
+                savePathDir = CHECKPOINT_PATH + "rnn-epoch-{}/".format(epoch_idx)
+                savePath = savePathDir + "lstm-model"
+                
+                # Make sure firectory is created
+                if (not os.path.exists(savePathDir)):
+                    os.makedirs(savePathDir)
+                
                 # Save the epoch as a checkpoint
-                saver.save(sess, CHECKPOINT_PATH + "rnn-epoch-{}.pb".format(epoch_idx));
+                saver.save(sess, savePath);
                 print("Finished epoch #{0} in {1}".format(datetime.timedelta(seconds=time.time() - startTime)))
                 
+                
+            # Make sure directory exists or create it
+            if (not os.path.exists(MODEL_OUTPUT_DIR)):
+                os.makedirs(savePathDir)
+
             # Save the finalized model
             save_path = saver.save(sess, MODEL_OUTPUT_DIR);
+            
             print("Saved RNN model to: {}".format(save_path));
             
         # Print elapsed time
@@ -517,13 +535,16 @@ def variable_summaries(var):
 
 # Initialize trainer
 
-# trainer = RNNTrainer(['shooting', 'normal'], 0.3)
-# print(trainer.readFeatures())
-# Extract CNN Pool Layer Data
-# trainer.extractPoolLayerData()
+if __name__ == '__main__':
 
-# Launch training process
-# trainer.train()
+    # Define the RNN Trainer
+    trainer = RNNTrainer(['shooting', 'normal', 'explosion'], 0.5)
+    
+    # Extract CNN Pool Layer Data
+    # trainer.extractPoolLayerData()
+
+    # Launch training process
+    trainer.train()
 
 
 

@@ -1,4 +1,4 @@
-from Classifier import Classifier
+from Classifier import RNNClassifier
 import time, sys 
 import multiprocessing
 
@@ -19,7 +19,7 @@ class ClassifierManager():
         
         # Load the defined number of classifier workers
         for i in range(0, num_classifiers):
-            self.classifiers.append(Classifier(model_version))
+            self.classifiers.append(RNNClassifier(model_version))
             self.availableClassifiers.put(i)
             
         # Log loading time for classifiers
@@ -27,13 +27,15 @@ class ClassifierManager():
         
         
     # Get classification with next available classifier and returns result
-    def getClassification(self, image_data):
+    #
+    def getClassification(self, data):
+        
         # Get an unused classifier
         classifierID = self.availableClassifiers.get()
         classifier = self.classifiers[classifierID]
         
         # Send image data and get result
-        result = classifier.classifyCNN(image_data)
+        result = classifier.classify(data)
         
         # Make classifier available again
         self.availableClassifiers.put(classifierID)

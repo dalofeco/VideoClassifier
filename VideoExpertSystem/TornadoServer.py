@@ -103,7 +103,7 @@ if __name__ == "__main__":
     # Make sure exactly one argument is supplied
     if (len(sys.argv) == 2):
 
-        classifierManager = ClassifierManager(0.3, 1)
+        classifierManager = ClassifierManager(sys.argv[1], 1)
         socketServer = ClassifierServer(HTTP_PORT)
         socketServer.start()
         
