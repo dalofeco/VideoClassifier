@@ -353,7 +353,7 @@ class RNNTrainer(Trainer):
         print("Saved feature sequences in {} seconds!".format(time.time() - start))
         
         # Return number of sequences
-        return len(X)
+        return num_batches
     
     
     # Fetch a specified batches by number
