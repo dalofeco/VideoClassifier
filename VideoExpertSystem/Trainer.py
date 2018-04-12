@@ -344,7 +344,7 @@ class RNNTrainer(Trainer):
             batchFileName = self.sequences_dir + "sequence-{}.data".format(i)
             
             # Open file in writing mode
-            with open(batchFileName, "w+") as batchFile:
+            with open(batchFileName, "wb+") as batchFile:
                 
                 # Dump batch object to batchfile using pickle
                 pickle.dump(batch, batchFile)
@@ -368,7 +368,7 @@ class RNNTrainer(Trainer):
         batchFileName = self.sequences_dir + "sequence-{}.data".format(batchNumber)
     
         # Open the batch file
-        with open(batchFileName, "r") as batchFile:
+        with open(batchFileName, "rb") as batchFile:
             
             # Load batch from file
             batch = pickle.load(batchFile)
