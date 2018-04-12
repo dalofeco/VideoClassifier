@@ -318,6 +318,7 @@ class RNNTrainer(Trainer):
 
         # Log loading time
         print("Loaded data in {} seconds!".format(time.time() - start))
+        print("Starting save process")
         
         # Calculate num of batches
         num_batches = len(X) // batchSize
@@ -348,8 +349,8 @@ class RNNTrainer(Trainer):
                 # Dump batch object to batchfile using pickle
                 pickle.dump(batch, batchFile)
                 
-        # Return data
-        # return X, y
+        # Log performance time
+        print("Saved feature sequences in {} seconds!".format(time.time() - start))
         
         # Return number of sequences
         return len(X)
