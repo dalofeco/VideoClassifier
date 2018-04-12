@@ -519,15 +519,15 @@ class RNNTrainer(Trainer):
                 for batch_idx in range(num_batches):
                     
                     # Fetch x and y for current batch
-                    x,y = self.fetchBatch(batch_idx)
+                    batchX, batchY = self.fetchBatch(batch_idx)
                     
                     # Calculate start and end indexes
                     start_idx = batch_idx * batch_size
                     end_idx = start_idx + batch_size
                     
                     # Slice the batch
-                    batchX = x[start_idx:end_idx,:,:]
-                    batchY = y[start_idx:end_idx,:]
+                    # batchX = x[start_idx:end_idx,:,:]
+                    # batchY = y[start_idx:end_idx,:]
                     
                     # TB merge
                     merge = tf.summary.merge_all()
