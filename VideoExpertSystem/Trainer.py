@@ -426,7 +426,7 @@ class RNNTrainer(Trainer):
         
         
         # Extract frame sequence features
-        self.extractFeatures(truncated_backprop_length, batch_size)
+        num_batches = self.extractFeatures(truncated_backprop_length, batch_size)
         
         
         # Define X batch placeholder
@@ -517,9 +517,6 @@ class RNNTrainer(Trainer):
                 
                 # Read the X and Y data
                 x,y = self.extractFeatures(truncated_backprop_length)
-                
-                # Calculate number of batches 
-                num_batches = len(x) // batch_size
                 
                 # Define cell and hidden state to zeroes
                 _current_cell_state = np.zeros((batch_size, state_size))
