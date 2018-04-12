@@ -389,7 +389,7 @@ class RNNTrainer(Trainer):
         
         
     # Execute training after rnn dataset is ready
-    def train(self, num_batches):
+    def train(self, num_batches, batch_size):
         
         # Log
         print("Initiating LSTM training...")
@@ -421,8 +421,8 @@ class RNNTrainer(Trainer):
         # Define the num of classification classes
         num_classes = len(self.labels)
         
-        # Size of the batch
-        batch_size = 1
+        # Size of the batch specified in parameter
+        # batch_size = 1
         
         
         # Define X batch placeholder
@@ -432,7 +432,7 @@ class RNNTrainer(Trainer):
         y_batch_ph = tf.placeholder(tf.int32, [batch_size, num_classes], name="y_output")
         
         # Define cell and hidden state
-        cell_state_ph = tf. placeholder(tf.float32, [batch_size, state_size])
+        cell_state_ph = tf.placeholder(tf.float32, [batch_size, state_size])
         hidden_state_ph = tf.placeholder(tf.float32, [batch_size, state_size])
         
         # Define init state for LSTM cell
@@ -477,11 +477,13 @@ class RNNTrainer(Trainer):
             # Define variable summaries for losses
             variable_summaries(losses)
             
-        # Define total loss function
-        total_loss = tf.reduce_mean(losses)
+            # Define total loss function
+            total_loss = tf.reduce_mean(losses)
+
+        with tf.name_scope("train"):
         
-        # Define training step optimizer to minimize loss function
-        train_step = tf.train.AdagradOptimizer(0.3).minimize(total_loss)
+            # Define training step optimizer to minimize loss function
+            train_step = tf.train.AdagradOptimizer(0.3).minimize(total_loss)
         
         # Initialize saver with all vars and ops
         saver = tf.train.Saver();
@@ -499,9 +501,6 @@ class RNNTrainer(Trainer):
             
             # Initialize all variables
             sess.run(tf.global_variables_initializer())
-        
-            # Define list to keep track of loss
-            loss_list = []
             
             # Define counter for tensorboard
             counter = 0
@@ -538,14 +537,12 @@ class RNNTrainer(Trainer):
                                                                                                  X_batch_ph: batchX,
                                                                                                  y_batch_ph: batchY,
                                                                                                  cell_state_ph: _current_cell_state,
-                                                                                                 hidden_state_ph: _current_hidden_state
+                                                                                                 hidden_state_ph: _current_hidden_state,
+                                                                                                 batch_size: batch_size                                                                                                 
                                                                                              })
 
                     # Update the current cell states
                     _current_cell_state, _current_hidden_state = _current_state
-
-                    # Keep track of total loss by appending to local list
-                    loss_list.append(_total_loss)
                     
                     # Write out tensorboard summary and update the counter
                     tbFileWriter.add_summary(summary, counter)
@@ -613,8 +610,8 @@ if __name__ == '__main__':
     # Extract CNN Pool Layer Data
     # trainer.extractPoolLayerData()
 
-    # Launch training process for num of batches
-    trainer.train(68137)
+    # Launch training process for num of batches of batch size
+    trainer.train(68137, 32)
 
 
 
