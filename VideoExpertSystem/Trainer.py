@@ -105,6 +105,7 @@ class RNNTrainer(Trainer):
         
         # Initialize dataset directory
         self.dataset_dir = self.tf_files_dir + 'dataset/rnn/'
+        self.sequences_dir = self.tf_files_dir + 'sequences/'
         
         # Number of frames to consider at once
         self.FRAME_BATCH_LENGTH = 30
@@ -209,8 +210,13 @@ class RNNTrainer(Trainer):
                     print (label + " processed in %d seconds!" % (time.time() - labelStart))
                         
                         
-    # Get the data from our saved predictions/pooled features
-    def readFeatures(self, frameBatchLength):
+    # Get the data from our saved predictions/pooled features, 
+    # and extract feature sequences, saving them to disk
+    #
+    # RETURNS:
+    #   sequence_length: <int> - the number of sequences processed
+    #
+    def extractFeatures(self, frameBatchLength, batchSize):
         
         # Performance metrics
         start = time.time();
@@ -312,15 +318,75 @@ class RNNTrainer(Trainer):
 
         # Log loading time
         print("Loaded data in {} seconds!".format(time.time() - start))
-
+        
+        # Calculate num of batches
+        num_batches = len(X) // batchSize
+        
+        # For each batch to be created
+        for i in range(0, num_batches):
+            
+            # Define batch object to save to file
+            batch = { 'x':[], 'y':[] }
+            
+            # For each element in the batch
+            for ii in range(0, batchSize):
+                
+                # Calculate index in outer arrays
+                index = (i * batchSize) + ii
+            
+                # Append X and y elements to batch
+                batch['x'].append(X[index])
+                batch['y'].append(y[index])
+                
+                
+            # Define the file name
+            batchFileName = self.sequences_dir + "sequence-{}.data".format(i)
+            
+            # Open file in writing mode
+            with open(batchFileName, "w+") as batchFile:
+                
+                # Dump batch object to batchfile using pickle
+                pickle.dump(batch, batchFile)
+                
         # Return data
+        # return X, y
+        
+        # Return number of sequences
+        return len(X)
+    
+    
+    # Fetch a specified batch by number
+    #
+    def fetchBatch(self, batchNumber):
+        
+        # Define X and y to None
+        X = None
+        y = None
+        
+        # Define the file name
+        batchFileName = self.sequences_dir + "sequence-{}.data".format(batchNumber)
+    
+        # Open the batch file
+        with open(batchFileName, "r") as batchFile:
+            
+            # Load batch from file
+            batch = pickle.load(batchFile)
+            
+            X = batch['x']
+            y = batch['y']
+    
+        # Return batch data
         return X, y
+    
+            
     
     
     # Prepare data, then train
     def autoTrain(self):
         self.extractPoolLayerData();
+        self.extractFeatures();
         self.train();
+        
         
     # Execute training after rnn dataset is ready
     def train(self):
@@ -345,9 +411,7 @@ class RNNTrainer(Trainer):
         
         # Number of epochs to train for
         num_epochs = 3
-        
-        # total_series_length = 50000 # FIX THIS
-        
+                
         # Frames lookback length
         truncated_backprop_length = 30
         
@@ -359,6 +423,11 @@ class RNNTrainer(Trainer):
         
         # Size of the batch
         batch_size = 1
+        
+        
+        # Extract frame sequence features
+        self.extractFeatures(truncated_backprop_length, batch_size)
+        
         
         # Define X batch placeholder
         X_batch_ph = tf.placeholder(tf.float32, [batch_size, truncated_backprop_length, self.INPUT_LENGTH], name="sequence_input")
@@ -447,7 +516,7 @@ class RNNTrainer(Trainer):
                 print("Loading Data for Epoch", epoch_idx)
                 
                 # Read the X and Y data
-                x,y = self.readFeatures(truncated_backprop_length)
+                x,y = self.extractFeatures(truncated_backprop_length)
                 
                 # Calculate number of batches 
                 num_batches = len(x) // batch_size
@@ -459,6 +528,10 @@ class RNNTrainer(Trainer):
                 # Batching logistics
                 for batch_idx in range(num_batches):
                     
+                    # Fetch x and y for current batch
+                    x,y = self.fetchBatch(batch_idx)
+                    
+                    # Calculate start and end indexes
                     start_idx = batch_idx * batch_size
                     end_idx = start_idx + batch_size
                     
