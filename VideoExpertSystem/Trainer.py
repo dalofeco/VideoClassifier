@@ -341,10 +341,10 @@ class RNNTrainer(Trainer):
                 
                 
             # Define the file name
-            batchFileName = self.sequences_dir + "sequence-{}.data".format(i)
+            sequenceFileName = self.sequences_dir + "sequence-{}.data".format(i)
             
             # Open file in writing mode
-            with open(batchFileName, "wb+") as batchFile:
+            with open(sequenceFileName, "wb+") as batchFile:
                 
                 # Dump batch object to batchfile using pickle
                 pickle.dump(batch, batchFile)
@@ -356,26 +356,27 @@ class RNNTrainer(Trainer):
         return len(X)
     
     
-    # Fetch a specified batch by number
+    # Fetch a specified batches by number
     #
     def fetchBatch(self, batchNumber):
         
-        # Define X and y to None
+        # Define the batch arrays to return
         X = None
         y = None
         
         # Define the file name
-        batchFileName = self.sequences_dir + "sequence-{}.data".format(batchNumber)
-    
+        sequenceFileName = self.sequences_dir + "sequence-{}.data".format(batchNumber)
+
         # Open the batch file
-        with open(batchFileName, "rb") as batchFile:
-            
+        with open(sequenceFileName, "rb") as batchFile:
+
             # Load batch from file
             batch = pickle.load(batchFile)
-            
+
+            # Set batch entries
             X = batch['x']
             y = batch['y']
-    
+
         # Return batch data
         return X, y
     
@@ -538,7 +539,6 @@ class RNNTrainer(Trainer):
                                                                                                  y_batch_ph: batchY,
                                                                                                  cell_state_ph: _current_cell_state,
                                                                                                  hidden_state_ph: _current_hidden_state,
-                                                                                                 batch_size: batch_size                                                                                                 
                                                                                              })
 
                     # Update the current cell states
@@ -609,9 +609,16 @@ if __name__ == '__main__':
     
     # Extract CNN Pool Layer Data
     # trainer.extractPoolLayerData()
+    
+    # Define training options
+    backprop = 30
+    batch_size = 30
+    
+    # Get len of series after extracting features
+    series_length = trainer.extractFeatures(backprop, batch_size)
 
     # Launch training process for num of batches of batch size
-    trainer.train(68137, 32)
+    trainer.train(series_length, batch_size)
 
 
 
