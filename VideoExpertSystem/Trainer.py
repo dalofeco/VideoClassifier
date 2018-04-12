@@ -385,12 +385,11 @@ class RNNTrainer(Trainer):
     # Prepare data, then train
     def autoTrain(self):
         self.extractPoolLayerData();
-        self.extractFeatures();
         self.train();
         
         
     # Execute training after rnn dataset is ready
-    def train(self):
+    def train(self, num_batches):
         
         # Log
         print("Initiating LSTM training...")
@@ -424,10 +423,6 @@ class RNNTrainer(Trainer):
         
         # Size of the batch
         batch_size = 1
-        
-        
-        # Extract frame sequence features
-        num_batches = self.extractFeatures(truncated_backprop_length, batch_size)
         
         
         # Define X batch placeholder
@@ -515,9 +510,6 @@ class RNNTrainer(Trainer):
             for epoch_idx in range(0, num_epochs):
                 
                 print("Loading Data for Epoch", epoch_idx)
-                
-                # Read the X and Y data
-                x,y = self.extractFeatures(truncated_backprop_length)
                 
                 # Define cell and hidden state to zeroes
                 _current_cell_state = np.zeros((batch_size, state_size))
@@ -621,8 +613,8 @@ if __name__ == '__main__':
     # Extract CNN Pool Layer Data
     # trainer.extractPoolLayerData()
 
-    # Launch training process
-    trainer.train()
+    # Launch training process for num of batches
+    trainer.train(68137)
 
 
 
