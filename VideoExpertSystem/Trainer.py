@@ -564,7 +564,7 @@ class RNNTrainer(Trainer):
                 
                 # Save the epoch as a checkpoint
                 saver.save(sess, savePath);
-                print("Finished epoch #{0} in {1}".format(datetime.timedelta(seconds=time.time() - startTime)))
+                print("Finished epoch #{0} in {1}".format(epoch_idx, datetime.timedelta(seconds=time.time() - startTime)))
                 
                 
             # Make sure directory exists or create it
