@@ -8,7 +8,7 @@ import tflearn
 import numpy as np
 from collections import deque
 
-import time
+import time, datetime
 import os, sys, pickle
 from tqdm import tqdm
 
