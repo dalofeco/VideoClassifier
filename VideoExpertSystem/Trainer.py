@@ -568,8 +568,8 @@ class RNNTrainer(Trainer):
                 
                 
             # Make sure directory exists or create it
-            if (not os.path.exists(MODEL_OUTPUT_DIR)):
-                os.makedirs(savePathDir)
+            if not (os.path.exists(MODEL_OUTPUT_DIR)):
+                os.makedirs(MODEL_OUTPUT_DIR)
 
             # Save the finalized model
             save_path = saver.save(sess, MODEL_OUTPUT_DIR);
