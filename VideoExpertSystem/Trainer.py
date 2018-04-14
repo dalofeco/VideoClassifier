@@ -115,6 +115,7 @@ class RNNTrainer(Trainer):
         
         self.features_dir = self.tf_files_dir + 'features/'
         self.tryCreateDirectory(self.features_dir)
+        self.tryCreateDirectory(self.sequences_dir)
         
         # Save labels to be considered
         self.labels = labels;
