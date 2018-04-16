@@ -99,26 +99,38 @@ class RNNTrainer(Trainer):
         
         # Initialize superclass constructor
         super().__init__(modelVersion)
-         # Initializes the following
-        # self.tf_files_dir
-        # self.modelVersion
+        # Initializes the following
+        #   self.tf_files_dir
+        #   self.modelVersion
+        
+        # Save labels to be considered
+        self.labels = labels;
+        
         
         # Initialize dataset directory
         self.dataset_dir = self.tf_files_dir + 'dataset/rnn/'
         self.sequences_dir = self.tf_files_dir + 'sequences/'
-        
-        # Number of frames to consider at once
-        self.FRAME_BATCH_LENGTH = 30
-        
-        # 2048-d vector length for image features before pooling layer from image classifier CNN 
-        self.INPUT_LENGTH = 2048 
-        
         self.features_dir = self.tf_files_dir + 'features/'
+        self.checkpoint_path = self.tf_files_dir + "rnn-checkpoints/" # Training checkpoints
+        self.model_output_dir = self.tf_files_dir + "rnn-model/"; # Model output dir
+        self.tb_log_dir = self.tf_files_dir + "rnn-logs/"; # TensorBoard log dir
+        
+        # Make sure all directories exist or create them
         self.tryCreateDirectory(self.features_dir)
         self.tryCreateDirectory(self.sequences_dir)
+        self.tryCreateDirectory(self.features_dir)
+        self.tryCreateDirectory(self.checkpoint_path)
+        self.tryCreateDirectory(self.model_ouput_dir)
+        self.tryCreateDirectory(self.tb_log_dir)
         
-        # Save labels to be considered
-        self.labels = labels;
+        
+        # DEFINE LSTM RNN OPTIONS
+        self.num_epochs = 3 # Number of epochs to train for
+        self.state_size = 2048 # Define state size
+        self.num_classes = len(self.labels) # Define the num of classification classes
+        self.truncated_backprop_length = 20 # Frames lookback length (len of sequences)
+        self.batch_size = 1 # Number of frame sequences to consider at once
+        self.input_length = 2048 # 2048-d vector length for image features before pooling layer from image classifier CNN 
         
         
      # Extracts all features from pooling layer of CNN to dataset files for RNN training
@@ -217,7 +229,7 @@ class RNNTrainer(Trainer):
     # RETURNS:
     #   sequence_length: <int> - the number of sequences processed
     #
-    def extractFeatures(self, frameBatchLength, batchSize):
+    def extractFeatures(self):
         
         # Performance metrics
         start = time.time();
@@ -270,7 +282,7 @@ class RNNTrainer(Trainer):
                             actualLabel = frame[1]
                         
                             # If deque of size of batch length, start adding to X and Y
-                            if (len(featuresDeque) == frameBatchLength - 1):
+                            if (len(featuresDeque) == self.truncated_backprop_length - 1):
                                 featuresDeque.append(cnnFeatures)
                                 X.append(np.array(list(featuresDeque)))
                                 y.append(Categories.labelToNum(actualLabel))
@@ -303,7 +315,7 @@ class RNNTrainer(Trainer):
         y = np.array(y)
 
         # Reshape to dimensions, with batches of defined input length
-        X = X.reshape(datasetLength, frameBatchLength, self.INPUT_LENGTH)
+        X = X.reshape(datasetLength, self.truncated_backprop_length, self.input_length)
         
         print("X Shape:")
         print(X.shape)
@@ -322,7 +334,7 @@ class RNNTrainer(Trainer):
         print("Starting save process")
         
         # Calculate num of batches
-        num_batches = len(X) // batchSize
+        num_batches = len(X) // self.batch_size
         
         # For each batch to be created
         for i in range(0, num_batches):
@@ -331,10 +343,10 @@ class RNNTrainer(Trainer):
             batch = { 'x':[], 'y':[] }
             
             # For each element in the batch
-            for ii in range(0, batchSize):
+            for ii in range(0, self.batch_size):
                 
                 # Calculate index in outer arrays
-                index = (i * batchSize) + ii
+                index = (i * self.batch_size) + ii
             
                 # Append X and y elements to batch
                 batch['x'].append(X[index])
@@ -391,64 +403,41 @@ class RNNTrainer(Trainer):
         
         
     # Execute training after rnn dataset is ready
-    def train(self, num_batches, batch_size):
+    def train(self, num_batches):
         
         # Log
         print("Initiating LSTM training...")
         
         # Performance metrics
-        start = time.time();
+        start = time.time()
         
-        # Training checkpoints
-        CHECKPOINT_PATH = self.tf_files_dir + "rnn-checkpoints/"
         
-        # Model output dir
-        MODEL_OUTPUT_DIR = self.tf_files_dir + "rnn-model/";
+        with tf.name_scope("x_batch_ph"):
+            
+            # Define X batch placeholder
+            X_batch_ph = tf.placeholder(tf.float32, [self.batch_size, self.truncated_backprop_length, self.input_length])
         
-        # TensorBoard log dir
-        TB_LOG_DIR = self.tf_files_dir + "rnn-logs/";
+        with tf.name_scope("y_batch_ph"):
 
-        
-        # DEFINE LSTM RNN OPTIONS
-        
-        # Number of epochs to train for
-        num_epochs = 3
-                
-        # Frames lookback length
-        truncated_backprop_length = 30
-        
-        # Define state size
-        state_size = 2048
-        
-        # Define the num of classification classes
-        num_classes = len(self.labels)
-        
-        # Size of the batch specified in parameter
-        # batch_size = 1
-        
-        
-        # Define X batch placeholder
-        X_batch_ph = tf.placeholder(tf.float32, [batch_size, truncated_backprop_length, self.INPUT_LENGTH], name="sequence_input")
-        
-        # Y batch has batch_size elements, with categories for each backprop frame
-        y_batch_ph = tf.placeholder(tf.int32, [batch_size, num_classes], name="y_output")
+            # Y batch has batch_size elements, with categories for each backprop frame
+            y_batch_ph = tf.placeholder(tf.int32, [self.batch_size, self.num_classes])
         
         # Define cell and hidden state
-        cell_state_ph = tf.placeholder(tf.float32, [batch_size, state_size])
-        hidden_state_ph = tf.placeholder(tf.float32, [batch_size, state_size])
+        cell_state_ph = tf.placeholder(tf.float32, [self.batch_size, self.state_size])
+        hidden_state_ph = tf.placeholder(tf.float32, [self.batch_size, self.state_size])
         
         # Define init state for LSTM cell
         init_state = tf.nn.rnn_cell.LSTMStateTuple(cell_state_ph, hidden_state_ph)
         
         with tf.name_scope('weights'):
             # Initialize weight variable tensors with random data
-            W = tf.Variable(np.random.rand(state_size, num_classes), dtype=tf.float32)
+            W = tf.Variable(np.random.rand(self.state_size, self.num_classes), dtype=tf.float32)
             # Define variable summaries for TensorBoard
             variable_summaries(W)
             
         with tf.name_scope('bias'):
             # Initialize bias variable tensors with zeroes
-            b = tf.Variable(np.zeros((1 , num_classes)), dtype=tf.float32)
+            b = tf.Variable(np.zeros((1 , self.num_classes)), dtype=tf.float32)
             # Define variable summaries for TensorBoard
             variable_summaries(b)
         
@@ -457,7 +446,7 @@ class RNNTrainer(Trainer):
         labels_series = tf.unstack(y_batch_ph, axis=1)
         
         # Define LSTM cell
-        cell = tf.nn.rnn_cell.BasicLSTMCell(state_size, state_is_tuple=True)
+        cell = tf.nn.rnn_cell.BasicLSTMCell(self.state_size, state_is_tuple=True)
         
         # Create RNN from LSTM cell and inputs
         states_series, current_state = tf.nn.static_rnn(cell, inputs_series, init_state)
@@ -470,6 +459,14 @@ class RNNTrainer(Trainer):
 
             # Define softmax layer for one-hot encoding of output classification
             predictions_series = [tf.nn.softmax(logits) for logits in logits_series]
+            
+        
+        # Predictions
+        with tf.name_scope("predictions"):
+            
+            # Get each top prediction for series
+            predictions = [tf.argmax(prediction, 1) for prediction in predictions_series]
+            
         
         # Define name scope for ops
         with tf.name_scope("loss"):
@@ -481,11 +478,28 @@ class RNNTrainer(Trainer):
             
             # Define total loss function
             total_loss = tf.reduce_mean(losses)
+            
+        # Accuracy function
+        with tf.name_scope("accuracy"):
+        
+            # Get the equality values
+            equalities = [tf.equal(y_batch_ph[prediction], 1) for prediction in predictions]
+            
+            # Define accuracies
+            accuracies = [tf.reduce_mean(tf.cast(equality, tf.float32)) for equality in equalities]
+            
+            # Define accuracy function
+            total_accuracy = tf.reduce_mean(accuracies)
+
+            # Define summaries for total accuracy
+            variable_summaries(total_accuracy)
+            
 
         with tf.name_scope("train"):
         
             # Define training step optimizer to minimize loss function
             train_step = tf.train.AdagradOptimizer(0.3).minimize(total_loss)
+        
         
         # Initialize saver with all vars and ops
         saver = tf.train.Saver();
@@ -499,7 +513,7 @@ class RNNTrainer(Trainer):
         with tf.Session() as sess:
             
             # Start TensorBoard logger
-            tbFileWriter = tf.summary.FileWriter(TB_LOG_DIR, sess.graph);
+            tbFileWriter = tf.summary.FileWriter(self.tb_log_dir, sess.graph);
             
             # Initialize all variables
             sess.run(tf.global_variables_initializer())
@@ -508,13 +522,13 @@ class RNNTrainer(Trainer):
             counter = 0
             
             # Repeat for each epoch
-            for epoch_idx in range(0, num_epochs):
+            for epoch_idx in range(0, self.num_epochs):
                 
                 print("Loading Data for Epoch", epoch_idx)
                 
                 # Define cell and hidden state to zeroes
-                _current_cell_state = np.zeros((batch_size, state_size))
-                _current_hidden_state = np.zeros((batch_size, state_size))
+                _current_cell_state = np.zeros((self.batch_size, self.state_size))
+                _current_hidden_state = np.zeros((self.batch_size, self.state_size))
             
                 # Batching logistics
                 for batch_idx in range(num_batches):
@@ -523,8 +537,8 @@ class RNNTrainer(Trainer):
                     batchX, batchY = self.fetchBatch(batch_idx)
                     
                     # Calculate start and end indexes
-                    start_idx = batch_idx * batch_size
-                    end_idx = start_idx + batch_size
+                    start_idx = batch_idx * self.batch_size
+                    end_idx = start_idx + self.batch_size
                     
                     # Slice the batch
                     # batchX = x[start_idx:end_idx,:,:]
@@ -556,7 +570,7 @@ class RNNTrainer(Trainer):
                 print("Epoch ", epoch_idx, " completed.")
                 
                 # Define the save path
-                savePathDir = CHECKPOINT_PATH + "rnn-epoch-{}/".format(epoch_idx)
+                savePathDir = self.checkpoint_path + "rnn-epoch-{}/".format(epoch_idx)
                 savePath = savePathDir + "lstm-model"
                 
                 # Make sure firectory is created
@@ -569,11 +583,11 @@ class RNNTrainer(Trainer):
                 
                 
             # Make sure directory exists or create it
-            if not (os.path.exists(MODEL_OUTPUT_DIR)):
-                os.makedirs(MODEL_OUTPUT_DIR)
+            if not (os.path.exists(self.model_output_dir)):
+                os.makedirs(self.model_output_dir)
 
             # Save the finalized model
-            save_path = saver.save(sess, MODEL_OUTPUT_DIR);
+            save_path = saver.save(sess, self.model_output_dir);
             
             print("Saved RNN model to: {}".format(save_path));
             
@@ -611,15 +625,11 @@ if __name__ == '__main__':
     # Extract CNN Pool Layer Data
     # trainer.extractPoolLayerData()
     
-    # Define training options
-    backprop = 30
-    batch_size = 30
-    
     # Get len of series after extracting features
-    series_length = trainer.extractFeatures(backprop, batch_size)
+    series_length = trainer.extractFeatures()
 
     # Launch training process for num of batches of batch size
-    trainer.train(series_length, batch_size)
+    trainer.train(series_length)
 
 
 
