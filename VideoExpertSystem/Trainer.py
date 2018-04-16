@@ -492,7 +492,7 @@ class RNNTrainer(Trainer):
 #            total_accuracy = tf.reduce_mean(accuracies)
 #
 #            # Define summaries for total accuracy
-            variable_summaries(total_accuracy)
+             # variable_summaries(total_accuracy)
             
 
         with tf.name_scope("train"):
