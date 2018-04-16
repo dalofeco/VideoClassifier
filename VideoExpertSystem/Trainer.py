@@ -479,19 +479,19 @@ class RNNTrainer(Trainer):
             # Define total loss function
             total_loss = tf.reduce_mean(losses)
             
-        # Accuracy function
-        with tf.name_scope("accuracy"):
-        
-            # Get the equality values
-            equalities = [tf.equal(y_batch_ph[prediction], 1) for prediction in predictions]
-            
-            # Define accuracies
-            accuracies = [tf.reduce_mean(tf.cast(equality, tf.float32)) for equality in equalities]
-            
-            # Define accuracy function
-            total_accuracy = tf.reduce_mean(accuracies)
-
-            # Define summaries for total accuracy
+#        # Accuracy function
+#        with tf.name_scope("accuracy"):
+#        
+#            # Get the equality values
+#            equalities = [tf.equal(y_batch_ph[prediction], 1) for prediction in predictions]
+#            
+#            # Define accuracies
+#            accuracies = [tf.reduce_mean(tf.cast(equality, tf.float32)) for equality in equalities]
+#            
+#            # Define accuracy function
+#            total_accuracy = tf.reduce_mean(accuracies)
+#
+#            # Define summaries for total accuracy
             variable_summaries(total_accuracy)
             
 
