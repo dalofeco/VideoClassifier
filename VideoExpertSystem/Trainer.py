@@ -120,7 +120,7 @@ class RNNTrainer(Trainer):
         self.tryCreateDirectory(self.sequences_dir)
         self.tryCreateDirectory(self.features_dir)
         self.tryCreateDirectory(self.checkpoint_path)
-        self.tryCreateDirectory(self.model_ouput_dir)
+        self.tryCreateDirectory(self.model_output_dir)
         self.tryCreateDirectory(self.tb_log_dir)
         
         
