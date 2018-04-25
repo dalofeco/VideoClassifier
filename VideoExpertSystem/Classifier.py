@@ -39,48 +39,43 @@ class CNNClassifier(Classifier):
         # Load CNN model
         self.loadModel()
         
-        
-     # Load a specific image into the classifier
-    def loadImage(self, image_path):
-        # read in the image_data
-        self.image_data = tf.gfile.FastGFile(image_path, 'rb').read();
-        
     
     # Load the CNN model into class variables
     def loadModel(self):
 
+        # Define the cnn model path
+        cnnModelPath = self.tf_files_dir + "retrained_graph.pb"
+        
         # Performance metrics
         start = time.time()
 
         # Loads label file, strips off carriage return
         self.label_lines = [line.rstrip() for line in tf.gfile.GFile(self.tf_files_dir + "retrained_labels.txt")]
-
-        # Unpersists graph from file
-        with tf.gfile.FastGFile(self.tf_files_dir + "retrained_graph.pb", 'rb') as f:
+        
+        # Reads graph from file
+        with tf.gfile.FastGFile(cnnModelPath, 'rb') as f:
+            
+            # Gets the graph definition
             self.graph_def = tf.GraphDef()
             self.graph_def.ParseFromString(f.read())
             self._ = tf.import_graph_def(self.graph_def, name='')
 
             self.sess = tf.Session()        
 
-            # Feed the image_data as input to the graph and get last prediction
+            # Get the softmax and pool tensor for classification or data extraction
             self.cnn_softmax_tensor = self.sess.graph.get_tensor_by_name('final_result:0')
+            self.pool_tensor = self.sess.graph.get_tensor_by_name('pool_3:0')
 
             # Log loading time
             print("Loaded Model v" + str(self.modelVersion) + " in %.2f seconds!" % (time.time() - start));
             
             
     # Classifies images using the CNN model
-    def classify(self, image_data=None):
+    def classify(self, image_data):
         
         # If no image data was supplied
         if (image_data == None):
-            # And classifier hasn't loaded image
-            if (self.image_data == None):
-                print("No image loaded yet!")
-                return
-            # Load class image data
-            image_data = self.image_data;
+            return -1;
             
         # Get predictions from softmax tensor layer
         predictions = self.sess.run(self.cnn_softmax_tensor, {'DecodeJpeg/contents:0': image_data})
@@ -96,6 +91,19 @@ class CNNClassifier(Classifier):
             result[human_string] = int(score * 100);
             
         return result;
+    
+    # Gets the pool data from CNN model
+    def getPoolData(self, image_data):
+        
+        # If no image data was supplied
+        if (image_data == None):
+            return -1;
+        
+        # Get predictions from softmax tensor layer
+        pool_representation = self.sess.run(self.pool_tensor, {'DecodeJpeg/contents:0': image_data})
+            
+        return pool_representation;
+            
             
         
         
@@ -106,16 +114,23 @@ class RNNClassifier(Classifier):
     #  Constructor from Classifier superclass
     def constructor(self):
         
+        # Get a cnn classifier for CNN representation of image_data
+        self.cnnClassifier = CNNClassifier(self.modelVersion)
+        
         # Load RNN model
         self.loadModel()
         
             
     # Loads the LSTM RNN model into class variables
+    #
     def loadModel(self):
         
+        # Performance metrics
+        startTime = time.time()
+        
         # Define the file dirs and names
-        rnnModelDir = self.tf_files_dir + "rnn-model/"
-        metaFilePath = rnnModelDir + "rnn-epoch-1.pb.meta"
+        lstmModelPath = self.tf_files_dir + "rnn-checkpoints/"
+        metaFilePath = lstmModelPath + "rnn-epoch-0.pb.meta"
         
         # Load labels
         self.label_lines = [line.rstrip() for line in tf.gfile.GFile(self.tf_files_dir + "retrained_labels.txt")]
@@ -124,27 +139,52 @@ class RNNClassifier(Classifier):
         start = time.time()
         
         # Start the tensorflow session
-        sess = tf.Session()
+        with tf.Session() as self.sess:
+
+            # Load meta graph
+            saver = tf.train.import_meta_graph(metaFilePath)
+            saver.restore(self.sess, tf.train.latest_checkpoint(lstmModelPath))
+
+            # Get the default graph
+            graph = tf.get_default_graph()
+
+            # Load graph tensor by name
+            self.rnn_softmax_tensor = graph.get_tensor_by_name('predictions_series:0')
         
-        # Load meta graph
-        saver = tf.train.import_meta_graph(metaFilePath)
-        saver.restore(sess, tf.train.latest_checkpoint(rnnModelDir))
+        # Print performance metrics
+        print("Loaded LSTM model in {} seconds!".format(time.time() - startTime))
+              
         
-        # Get the default graph
-        graph = tf.get_default_graph()
+    # Process frame sequences to cnn representation sequence
+    #
+    def processFrameSequences(self, frame_sequences):
         
-        print(graph.get_operations())
+        # Make sure frame sequences were supplied
+        if not (frame_sequence):
+            print("No frame sequence supplied!")
+            return
         
-        # Load graph tensor by name
-        self.rnn_softmax_tensor = graph.get_tensor_by_name('predictions_series:0')
+        # Define frame sequences list for sequences
+        frame_sequences = []
+        
+        # For each sequence
+        for sequence in frame_sequences:
+            
+            # Define a sequence list for holding frames
+            sequence = []
+          
+            # Fpr each frame in the sequence
+            for frame in sequence:
+            
+                # Get pool data and append to list
+                sequence.append(self.cnnClassifier.getPoolData(frame))
         
     
     # Classifies a sequence of frames using the loaded RNN model
     #
     def classify(self, frame_sequences):
         
-        
-         # Mage sure frame sequences were supplied
+         # Make sure frame sequences were supplied
         if not (frame_sequence):
             print("No frame sequence supplied!")
             return
@@ -153,29 +193,30 @@ class RNNClassifier(Classifier):
         batch_size = 8
         backprop_length = 16
         inputSize = 2048
+        sequencesData = []
         
-        sequences_data = []
-        sequences_provided = len(frame_sequences)
+        processedSequences = self.processFrameSequences(frame_sequences)
+        sequencesProvided = len(sequences_data)
         
         # For each element expected in batch
         for i in range(0, batch_size):
             
             # If a sequence is provided for this batch, add it
             if (i < sequencesProvided):
-                sequences_data.append(frame_sequences[i])
+                sequencesData.append(processedSequences[i])
                 
             # If not, append a zeros entry for placeholding
             else:
-                sequences_data.append(np.zeros(backprop_length, input_size))
-            
-            # Append frame sequence to data 
-            sequences_data.append(frame_sequence)
+                sequencesData.append(np.zeros([backprop_length, input_size]))
+
             
         # Get x input tensor
-        x_input = tf.get_tensor_by_name("X_batch_ph")
+        x_input = tf.get_tensor_by_name("X_batch_ph") 
             
         # Get predictions from softmax tensor layer
-        predictions = self.sess.run(self.rnn_softmax_tensor, {x_input: frame_sequence})
+        predictions = self.sess.run(self.rnn_softmax_tensor, {x_input: sequencesData})
+        
+        print(predictions)
 
         # Sort to show labels of first prediction in order of confidence
         top_k = predictions[0].argsort()[-len(predictions[0]):][::-1]

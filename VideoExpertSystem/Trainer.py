@@ -128,7 +128,7 @@ class RNNTrainer(Trainer):
         self.num_epochs = 3 # Number of epochs to train for
         self.state_size = 2048 # Define state size
         self.num_classes = len(self.labels) # Define the num of classification classes
-        self.truncated_backprop_length = 20 # Frames lookback length (len of sequences)
+        self.truncated_backprop_length = 16 # Frames lookback length (len of sequences)
         self.batch_size = 1 # Number of frame sequences to consider at once
         self.input_length = 2048 # 2048-d vector length for image features before pooling layer from image classifier CNN 
         
@@ -618,7 +618,7 @@ def variable_summaries(var):
 # Initialize trainer
 
 if __name__ == '__main__':
-
+    
     # Define the RNN Trainer
     trainer = RNNTrainer(['shooting', 'normal', 'explosion'], 0.5)
     

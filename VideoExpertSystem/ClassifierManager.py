@@ -1,4 +1,5 @@
 from Classifier import CNNClassifier
+from Classifier import RNNClassifier
 import time, sys 
 import multiprocessing
 
@@ -19,7 +20,7 @@ class ClassifierManager():
         
         # Load the defined number of classifier workers
         for i in range(0, num_classifiers):
-            self.classifiers.append(CNNClassifier(model_version))
+            self.classifiers.append(RNNClassifier(model_version))
             self.availableClassifiers.put(i)
             
         # Log loading time for classifiers
