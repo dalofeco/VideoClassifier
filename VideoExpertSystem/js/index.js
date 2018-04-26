@@ -86,7 +86,7 @@ function initWebSocket(onopenCallback) {
 function sendFramesForClassification(startTime) {
     
     // Make sure ws is not null
-    if (ws && frames.length > 0) {
+    if (ws && frames.length == 16) {
         
         // Log
         console.log("Sending " + frames.length.toString() + " frames.")
@@ -136,14 +136,15 @@ function startAnalysis() {
                     frames.push(frameData['blob'])
                     frameCount++
                     console.log("Adding frame to frames")
+                    sendFramesForClassification(Date.now())
                 })
             }, FRAME_TIME_INTERVAL)    
 
-            // Send request every defined interval 
-            requestInterval = setInterval(function() {
-                startTime = Date.now()
-                sendFramesForClassification(startTime)
-            }, SEND_TIME_INTERVAL)    
+//            // Send request every defined interval 
+//            requestInterval = setInterval(function() {
+//                startTime = Date.now()
+//                sendFramesForClassification(startTime)
+//            }, SEND_TIME_INTERVAL)    
 
         }) 
         

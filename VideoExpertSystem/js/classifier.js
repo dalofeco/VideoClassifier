@@ -74,21 +74,21 @@ function initWebSocket(onopenCallback) {
 }
 
 // Sends all stored frames to server via websocket
-function sendFramesForClassification(startTime) {
+function sendFramesForClassification(startTime, framesCopy) {
+    
+    
     
     // Make sure ws is not null
-    if (ws && frames.length > 0) {
+    if (ws && framesCopy.length == 16) {
         
         // Log
-        console.log("Sending " + frames.length.toString() + " frames.")
+        console.log("Sending " + framesCopy.length.toString() + " frames.")
         
         // Send JSON array 
-        ws.send(JSON.stringify(frames))
+        ws.send(JSON.stringify(framesCopy))
 
-        // Clear frames array
-        frames = []
     } else {
-        console.log("Couldn't send frames: " + frames.length.toString())
+        console.log("Couldn't send frames: " + framesCopy.length.toString())
     }
 }
 
@@ -116,8 +116,13 @@ function startAnalysis() {
                     console.log("Adding frame to frames")
                     
                     // Send frames when count is 16
-                    if (frames.length == 16) {
-                        sendFramesForclassification(Date.now())
+                    if (frameCount == 16) {
+                        
+                        frameCopy = frames.slice(0)
+                        
+                        sendFramesForClassification(Date.now(), frames.slice(0))
+                        frameCount = 0
+                        frames = []
                     }
                 })
             }, FRAME_TIME_INTERVAL)    

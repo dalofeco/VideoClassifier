@@ -129,7 +129,7 @@ class RNNTrainer(Trainer):
         self.state_size = 2048 # Define state size
         self.num_classes = len(self.labels) # Define the num of classification classes
         self.truncated_backprop_length = 16 # Frames lookback length (len of sequences)
-        self.batch_size = 1 # Number of frame sequences to consider at once
+        self.batch_size = 8 # Number of frame sequences to consider at once
         self.input_length = 2048 # 2048-d vector length for image features before pooling layer from image classifier CNN 
         
         
@@ -284,8 +284,18 @@ class RNNTrainer(Trainer):
                             # If deque of size of batch length, start adding to X and Y
                             if (len(featuresDeque) == self.truncated_backprop_length - 1):
                                 featuresDeque.append(cnnFeatures)
+                                
+                                # Add features to X
                                 X.append(np.array(list(featuresDeque)))
-                                y.append(Categories.labelToNum(actualLabel))
+                                
+                                # Create an entry for each possible label and set the corresponding to 1
+                                oneHotList = np.zeros(len(self.labels))
+                                oneHotList[Categories.labelToNum(actualLabel)] = 1
+                                
+                                # Add to the y dataset
+                                y.append(oneHotList)
+                                
+                                # Pop oldest feature from deque
                                 featuresDeque.popleft()
                             else:
                                 # Add to the deque
@@ -316,15 +326,16 @@ class RNNTrainer(Trainer):
 
         # Reshape to dimensions, with batches of defined input length
         X = X.reshape(datasetLength, self.truncated_backprop_length, self.input_length)
+        print(y)
+        print("--")
+        print(y[0])
+        y = y.reshape(datasetLength, num_categories)
         
         print("X Shape:")
         print(X.shape)
 
         print("Y Shape:")
         print(y.shape)
-        
-        # One-hot encoded categoricals.
-        y = to_categorical(y, num_categories)
 
         # Split into train and test.
         # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=42)
@@ -398,8 +409,9 @@ class RNNTrainer(Trainer):
     
     # Prepare data, then train
     def autoTrain(self):
-        self.extractPoolLayerData();
-        self.train();
+        #self.extractPoolLayerData();
+        num_batches = self.extractFeatures();
+        self.train(num_batches);
         
         
     # Execute training after rnn dataset is ready
