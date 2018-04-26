@@ -12,6 +12,9 @@ var STREAMING = false
 const SEND_TIME_INTERVAL = 500;
 const FRAME_TIME_INTERVAL = 100;
 
+// Define number of frames to send in a single batch
+const NUMBER_OF_FRAMES = 16;
+
 // Interval function placeholders for clearing intervals 
 var frameInterval = null
 var requestInterval = null
@@ -31,6 +34,15 @@ $(document).ready(function() {
     
     // Define file picker handler
     $('#videoFilePicker').change(selectFile)
+    
+    // Define handler for activating webcam
+    $("#webcamButton").click(function() {
+    	navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia || navigator.oGetUserMedia;
+		
+		if (navigator.getUserMedia) {
+			navigator.getUserMedia({video: true}, handleWebcamStream, webcamError)
+		}
+    });
     
     // Define video player handler
     $('#videoPlayer').on('loadedmetadata', function() {
@@ -74,10 +86,10 @@ function initWebSocket(onopenCallback) {
 }
 
 // Sends all stored frames to server via websocket
-function sendFramesForClassification(startTime) {
+function sendFramesForClassification(startTime, frames) {
     
     // Make sure ws is not null
-    if (ws && frames.length > 0) {
+    if (ws && frames.length == NUMBER_OF_FRAMES) {
         
         // Log
         console.log("Sending " + frames.length.toString() + " frames.")

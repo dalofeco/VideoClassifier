@@ -20,73 +20,16 @@ var requestInterval = null
 // -------------- DOCUMENT READY SCRIPT -----------------
 
 $(document).ready(function() {
+    
 
-    // Graceful websocket closing before window unload
-    window.onbeforeunload = function() {
-        if (ws != null) {
-            ws.onclose = function() {}; // disable on close handler
-            ws.close() // close web socket
-            ws = null
-        }
-    }
-    
-    // Define file picker handler
-    $('#videoFilePicker').change(selectFile)
-
-    $("#webcamButton").click(function() {
-    	navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia || navigator.oGetUserMedia;
-		
-		if (navigator.getUserMedia) {
-			navigator.getUserMedia({video: true}, handleWebcamStream, webcamError)
-		}
-    });
-    
-    // Define video player handler
-    $('#videoPlayer').on('loadedmetadata', function() {
-        if ('function' === typeof duration) {
-            duration = duration(this.duration)
-            this.currentTime = Math.min(Math.max(0, (duration < 0 ? this.duration : 0) + duration), this.duration)
-        }
-    });
-    
-    // Define classify button handler to start active analysis
-    $("#classifyButton").click(toggleAnalysis);
 });
 
-// ------------------------------------------------------
-// -------------------- WEB SOCKETS ---------------------
-
-// Initializer for web socket
-function initWebSocket(onopenCallback) {
-    
-    // Declare websocket object with url
-    ws = new WebSocket("ws://" + window.location.hostname + ":8080/ws")
-    
-    // On websocket connection established
-    ws.onopen = onopenCallback
-    
-    // When message is recieved
-    ws.onmessage = function(event) {
-        console.log("Recieved message!")
-        updateResult(event.data)
-    }
-    
-    // When ws is closed
-    ws.onclose = function(event) {
-        ws = null
-        console.log("Websocket connection closed")
-        
-        stopAnalysis()
-    }
-    
-    return ws
-}
 
 // Sends all stored frames to server via websocket
 function sendFramesForClassification(startTime) {
     
     // Make sure ws is not null
-    if (ws && frames.length > 0) {
+    if (ws && frames.length == 16) {
         
         // Log
         console.log("Sending " + frames.length.toString() + " frames.")

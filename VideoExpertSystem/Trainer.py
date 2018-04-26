@@ -139,7 +139,7 @@ class RNNTrainer(Trainer):
         # Performance monitoring
         loadStart = time.time();
 
-        # Unpersists graph from file
+        # Reads graph from file
         with tf.gfile.FastGFile(self.tf_files_dir + "retrained_graph.pb", 'rb') as f:
             graph_def = tf.GraphDef()
             graph_def.ParseFromString(f.read())

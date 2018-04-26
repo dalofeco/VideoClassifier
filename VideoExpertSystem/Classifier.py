@@ -177,7 +177,7 @@ class RNNClassifier(Classifier):
             for frame in sequence:
             
                 # Get pool data and append to list
-                sequence.append(self.cnnClassifier.getPoolData(frame))
+                sequence.append(self.cnnClassifier.getPoolData(str(frame)))
         
     
     # Classifies a sequence of frames using the loaded RNN model
