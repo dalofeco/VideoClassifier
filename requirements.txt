@@ -1,6 +1,12 @@
 # VideoExpertSystem Python Requirements for pip
+
 tensorflow==1.7
-sklearn==0.19.1
+opencv-python
+sklearn
 scipy==1.0.1
+
 tflearn==0.3.2
+
 tqdm==4.21.0
+
+keyboard==0.13.1

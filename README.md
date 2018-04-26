@@ -10,12 +10,9 @@ The Video Expert System (will) incorporate TensorFlow's machine learning capabil
 ##### Pre-requisites
 
 - Python 3
-
 - TensorFlow 
-
 - OpenCV 
 
-  ​
 
 #### Instructions for Running Tornado Classifier Server for Trained Model
 
@@ -105,6 +102,8 @@ Python based tools to manage video, image frames, and classify into respective c
 ## Libraries Used
 
 #### Python Dependencies
+
+To install the dependencies, use the **requirements.txt** file supplied. Running `pip install -r requirements.txt` will install all necessary dependencies for the system.
 
 - TensorFlow
 - TFLearn
