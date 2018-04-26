@@ -20,7 +20,7 @@ class ClassifierManager():
         
         # Load the defined number of classifier workers
         for i in range(0, num_classifiers):
-            self.classifiers.append(RNNClassifier(model_version))
+            self.classifiers.append([CNNClassifier(model_version), RNNClassifier(model_version)])
             self.availableClassifiers.put(i)
             
         # Log loading time for classifiers
@@ -33,10 +33,23 @@ class ClassifierManager():
         
         # Get an unused classifier
         classifierID = self.availableClassifiers.get()
-        classifier = self.classifiers[classifierID]
+        
+        # Get the cnn and lstm classifiers
+        cnnClassifier = self.classifiers[classifierID][0]
+        lstmClassifer = self.classifiers[classifierID][1]
+        
+        # 16 frames must be provided
+        if (len(data) == 16):
+            
+            # Define pool data array
+            poolData = []
+
+            for frame in data:
+                # Process with cnn first
+                poolData.append(cnnClassifier.getPoolData(frame))
         
         # Send image data and get result
-        result = classifier.classify(data)
+        result = lstmClassifer.classify(poolData)
         
         # Make classifier available again
         self.availableClassifiers.put(classifierID)

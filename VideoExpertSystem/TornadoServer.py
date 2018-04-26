@@ -87,8 +87,15 @@ class ClassifierServer():
             # Load json encoded message
             b64images = json.loads(message)
             
+            # To store decoded images
+            images = []
+            
+            # Iterate through b64 images and decode
+            for image in b64images:
+                images.append(base64.b64decode(image))
+            
             # Get classifier result
-            result = classifierManager.getClassification(base64.b64decode(b64images[0]))
+            result = classifierManager.getClassification(images)
 
             # Send response and log time elapsed
             self.write_message(result)
