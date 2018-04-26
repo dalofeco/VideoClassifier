@@ -31,12 +31,8 @@ The Video Expert System (will) incorporate TensorFlow's machine learning capabil
 1. Clone the repository to your local machine.
 2. Copy the training images onto the `Models/tf_files-v{1.0}/cnn/dataset` directory. Make sure all image files are divided into different folders, each folder named with the associated category/label.
 3. Navigate into the `VideoExpertSystem` folder with the command line.
-4. Execute an interactive Python 3 shell by simply running the `python3` command.
-5. Import CNNTrainer from Trainer.py with `from Trainer import CNNTrainer`.
-6. Create a new CNNTrainer object with `trainer = CNNTrainer(1.0)` replacing the number with your model's version number. 
-7. Execute `trainer.retrain()` to initiate the retraining process.
-
-**Note:** Depending on your setup, you might need replace `python3` with your command to execute Python 3 (usually just `python`). The training steps parameter can also be modified as desired.
+4. Execute the `Trainer.py` script with `cnn` option followed by your version number. Ex: `python Trainer.py cnn 1.0`
+5. The script will start the retraining process and save your model under `tf_files-v{1.0}/retrained_graph.pb`.
 
 **Disclaimer:** The `VideoExpertSystem/tf_scripts` folder is sourced from the official TensorFlow repo. It contains helper scripts for training and classifying, and is provided within for convenience, to avoid having to clone the entire repository. 
 
@@ -44,12 +40,10 @@ The Video Expert System (will) incorporate TensorFlow's machine learning capabil
 
 1. Clone the repository to your local machine.
 2. Copy the training video frames onto the `VideoExpertSystem/Models/tf_files-v{1.0}/rnn/dataset` directory.
-3. Open a Python 3 interactive shell on the `VideoExpertSystem` directory.
-4. Run `from Trainer import RNNTrainer` to import the RNNTrainer class.
-5. Run `trainer = RNNTrainer({labels}{model_version})` with the appropriate parameters to initialize an instance of the trainer.
-6. Run `trainer.autoTrain()` to start the entire data processing and training process.
+3. Run the `Trainer.py` script using the `rnn` option followed by your model version number. Ex: `python Trainer.py rnn 1.0`
+4. The script will start pre-processing the data, and then initiate the training process, saving your model under `tf_files-v{1.0}/rnn-model/lstm-model`.
 
-**Note**: The training process may take extremely long time periods depending on the size of your dataset. It is recommended to run on powerful machines with an optimized version of TensorFlow.
+**Note**: The training process may take extremely long time periods depending on the size of your dataset. It is recommended to run on powerful machines, preferrably using NVIDIA GPUs with an optimized version of TensorFlow.
 
 
 

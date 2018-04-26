@@ -409,9 +409,15 @@ class RNNTrainer(Trainer):
     
     # Prepare data, then train
     def autoTrain(self):
-        #self.extractPoolLayerData();
-        num_batches = self.extractFeatures();
-        self.train(num_batches);
+        
+        # Extract CNN Pool Layer Data
+        self.extractPoolLayerData()
+
+        # Get len of series after extracting features
+        series_length = self.extractFeatures()
+
+        # Launch training process for num of batches of batch size
+        self.train(series_length);
         
         
     # Execute training after rnn dataset is ready
@@ -628,20 +634,27 @@ def variable_summaries(var):
 # Example RNN training
 
 # Initialize trainer
-
 if __name__ == '__main__':
     
-    # Define the RNN Trainer
-    trainer = RNNTrainer(['shooting', 'normal', 'explosion'], 0.5)
-    
-    # Extract CNN Pool Layer Data
-    # trainer.extractPoolLayerData()
-    
-    # Get len of series after extracting features
-    series_length = trainer.extractFeatures()
+    # Make sure all args supplied
+    if (len(sys.argv) >= 3):
+        
+        # Get arguments
+        trainerType = sys.argv[1]
+        modelVersion = sys.argv[2]
+        
+        if (trainerType == 'cnn'):
 
-    # Launch training process for num of batches of batch size
-    trainer.train(series_length)
+            trainer = CNNTrainer(modelVersion)
+            trainer.retrain()
+            
+        elif (trainerType = 'rnn'):
 
+            # Define the RNN Trainer
+            trainer = RNNTrainer(modelVersion)
+            trainer.autoTrain()
+        
+    else:
+        print("Usage: python Trainer.py (type) (model_version)")
 
 
