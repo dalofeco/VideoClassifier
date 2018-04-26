@@ -13,7 +13,9 @@ const SEND_TIME_INTERVAL = 500;
 const FRAME_TIME_INTERVAL = 100;
 
 // Define number of frames to send in a single batch
-const NUMBER_OF_FRAMES = 16;
+var NUMBER_OF_FRAMES = 16;
+
+var MODEL_TYPE = "cnn-model-1.0"
 
 // Interval function placeholders for clearing intervals 
 var frameInterval = null
@@ -44,6 +46,31 @@ $(document).ready(function() {
 		}
     });
     
+    // Define handler for switching model type
+    $('.model-select-button').on('click', function() {
+        
+        // Update with the button's ID
+        MODEL_TYPE = this.id;
+        
+        // Update number of frames to send depending on model type
+        if (MODEL_TYPE.slice(0,9) == "cnn-model") {
+            NUMBER_OF_FRAMES = 4;
+        } else if (MODEL_TYPE.slice(0,10) == "lstm-model") {
+            NUMBER_OF_FRAMES = 16;
+        } else {
+            console.log(MODEL_TYPE.slice(0,10))
+        }
+        
+        // Reset franes and count to 0
+        frames = []
+        frameCount = 0
+        
+        // Log
+        console.log("Changed MODEL_TYPE to " + MODEL_TYPE)
+    });
+    
+    
+    
     // Define video player handler
     $('#videoPlayer').on('loadedmetadata', function() {
         if ('function' === typeof duration) {
@@ -54,6 +81,9 @@ $(document).ready(function() {
     
     // Define classify button handler to start active analysis
     $("#classifyButton").click(toggleAnalysis);
+    
+    
+    
 });
 
 // ------------------------------------------------------
@@ -94,12 +124,27 @@ function sendFramesForClassification(startTime, framesCopy) {
         // Log
         console.log("Sending " + framesCopy.length.toString() + " frames.")
         
+        request = {}
+        request['type'] = MODEL_TYPE;
+        request['frames'] = framesCopy;
+        
         // Send JSON array 
-        ws.send(JSON.stringify(framesCopy))
+        ws.send(JSON.stringify(request))
 
     } else {
         console.log("Couldn't send frames: " + framesCopy.length.toString())
     }
+}
+
+// ------------- WEB CAM STREAM STUFF -------------------
+
+// WEBCAM STREAM HANDLERS
+function handleWebcamStream(stream){
+	document.querySelector('#videoPlayer').src = window.URL.createObjectURL(stream);
+}
+
+function webcamError (e){
+	alert("There is a problem with the video stream.");
 }
 
 // ------------------------------------------------------
@@ -125,8 +170,8 @@ function startAnalysis() {
                     frameCount++
                     console.log("Adding frame to frames")
                     
-                    // Send frames when count is 16
-                    if (frameCount == 16) {
+                    // Send frames when count target is met
+                    if (frameCount == NUMBER_OF_FRAMES) {
                         
                         frameCopy = frames.slice(0)
                         
@@ -182,8 +227,37 @@ function toggleAnalysis() {
 }
 
 // ---------- DOM ELEMENT MANIPULATION ----------
-function updateResult(result){
-    $("#results").text(result)
+function updateResult(results){
+    
+    // Empty results pane
+    $("#results-pane").empty()
+    
+    results = JSON.parse(results)
+    
+    // For each key
+    for (var key in results) {
+        
+        // Capitalized key for aesthetics
+        capitalizedKey = key.charAt(0).toUpperCase() + key.slice(1)
+        
+        // Create a paragraph element with confidence score
+        resultP = document.createElement("p")
+        resultP.setAttribute("id", key)
+        resultP.setAttribute("class", "resultsText")
+        resultP.innerHTML = capitalizedKey + " Confidence Score:&emsp;"
+        
+        // Create percentage score
+        spanScore = document.createElement("span")
+        spanScore.setAttribute("class", "scoreText")
+        spanScore.innerHTML = results[key].toString() + "%"
+        
+        // Add score to result p
+        resultP.appendChild(spanScore)
+        
+        // Add to results pane
+        $("#results-pane").append(resultP)
+        
+    }
 }
 
 // ------------ DATA MANIPULATION ---------------

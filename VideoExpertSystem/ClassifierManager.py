@@ -29,30 +29,51 @@ class ClassifierManager():
         
     # Get classification with next available classifier and returns result
     #
-    def getClassification(self, data):
+    def getClassification(self, data, modelType):
         
-        # Get an unused classifier
-        classifierID = self.availableClassifiers.get()
+        # Verify cnn model type and make sure at least one frame is provided
+        if (modelType == 'cnn-model-1.0' and len(data) >= 1):
         
-        # Get the cnn and lstm classifiers
-        cnnClassifier = self.classifiers[classifierID][0]
-        lstmClassifer = self.classifiers[classifierID][1]
-        
-        # 16 frames must be provided
-        if (len(data) == 16):
+            # Get an unused classifier
+            classifierID = self.availableClassifiers.get()
+
+            # Get the cnn and lstm classifiers
+            cnnClassifier = self.classifiers[classifierID][0]
             
+            # Classify the first frame found
+            result = cnnClassifier.classify(data[0])
+            
+            # Make classifier available again
+            self.availableClassifiers.put(classifierID)
+            
+            
+        # Verify LSTM model type and that 16 frames are provided
+        elif (modelType == 'lstm-model-1.0' and len(data) == 16):
+            
+            # Get an unused classifier
+            classifierID = self.availableClassifiers.get()
+
+            # Get the cnn and lstm classifiers
+            cnnClassifier = self.classifiers[classifierID][0]            
+            lstmClassifer = self.classifiers[classifierID][1]
+
             # Define pool data array
             poolData = []
 
             for frame in data:
                 # Process with cnn first
                 poolData.append(cnnClassifier.getPoolData(frame))
+
+            # Send image data and get result
+            result = lstmClassifer.classify(poolData)
+
+            # Make classifier available again
+            self.availableClassifiers.put(classifierID)
+            
+        else:
+            print("Invalid classification request type or frame count!")
+            result = "Error"
         
-        # Send image data and get result
-        result = lstmClassifer.classify(poolData)
-        
-        # Make classifier available again
-        self.availableClassifiers.put(classifierID)
         
         return result
         

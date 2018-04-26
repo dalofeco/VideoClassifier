@@ -138,8 +138,8 @@ class RNNClassifier(Classifier):
         tf.reset_default_graph()
         
         # Define the file dirs and names
-        lstmModelPath = self.tf_files_dir + "rnn-checkpoints/rnn-epoch-2/"
-        metaFilePath = lstmModelPath + "lstm-model.meta"
+        lstmModelPath = self.tf_files_dir + "rnn-checkpoints/"
+        metaFilePath = lstmModelPath + "rnn-epoch-1.pb.meta"
         
         # Load labels
         self.label_lines = [line.rstrip() for line in tf.gfile.GFile(self.tf_files_dir + "retrained_labels.txt")]

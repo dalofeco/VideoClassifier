@@ -44,7 +44,6 @@
     <!-- Custom Theme JavaScript -->
     <script src="/dist/js/sb-admin-2.js"></script>
 
-	<script type="text/javascript" src="/js/index.js"></script>
     <script type="text/javascript" src="/js/classifier.js"></script>
     <!-- End of JS-->
 
@@ -72,7 +71,7 @@
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
                 </button>
-                <a class="navbar-brand" href="index.html">Cloud based  Intelligent  Video Surveillance  and Predictive  Monitoring  Platform</a>
+                <a class="navbar-brand" href="index.html">Cloud based Intelligent Video Surveillance and Predictive Monitoring Platform</a>
             </div>
             <!-- /.navbar-header -->
 
@@ -212,74 +211,32 @@
             <div class="navbar-default sidebar" role="navigation">
                 <div class="sidebar-nav navbar-collapse in">
                     <ul class="nav" id="side-menu">
-                        <li class="sidebar-search">
-                            <div class="input-group custom-search-form">
-                                <input type="text" class="form-control" placeholder="Search...">
-                                <span class="input-group-btn">
-                                <button class="btn btn-default" type="button">
-                                    <i class="fa fa-search"></i>
-                                </button>
-                            </span>
+                        
+                        <li class="in">
+                            <div class="panel panel-green">
+                                <div class="panel-heading">
+                                    <div class="row">
+                                        <div class="col-xs-3">
+                                            <i class="fa fa-tasks fa-5x"></i>
+                                        </div>
+                                        <div class="col-xs-9 text-right">
+                                            <div class="huge">Retrain</div>
+                                            <div>Model</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <a id="retrain-modal" onclick="alert('Coming soon!')" class="active">
+                                    <div class="panel-footer">
+                                        <span class="pull-left">View Details</span>
+                                        <span class="pull-right"><i class="fa fa-arrow-circle-right"></i></span>
+                                        <div class="clearfix"></div>
+                                    </div>
+                                </a>
                             </div>
-                            <!-- /input-group -->
                         </li>
                         
                         <li class="in">
-                            
-                            <ul class="nav nav-second-level collapse">
-                                <li>
-                                    <a href="flot.html">Flot Charts</a>
-                                </li>
-                                <li>
-                                    <a href="morris.html">Morris.js Charts</a>
-                                </li>
-                            </ul>
-                            <!-- /.nav-second-level -->
-                        <div class="panel panel-primary">
-                        <div class="panel-heading">
-                            <div class="row">
-                                <div class="col-xs-3">
-                                    <i class="fa fa-comments fa-5x"></i>
-                                </div>
-                                <div class="col-xs-9 text-right">
-                                    <div class="huge">26</div>
-                                    <div>New Comments!</div>
-                                </div>
-                            </div>
-                        </div>
-                        <a href="#" class="active">
-                            <div class="panel-footer">
-                                <span class="pull-left">View Details</span>
-                                <span class="pull-right"><i class="fa fa-arrow-circle-right"></i></span>
-                                <div class="clearfix"></div>
-                            </div>
-                        </a>
-                    </div></li>
-                        <li class="in">
-                            
-                        <div class="panel panel-green">
-                        <div class="panel-heading">
-                            <div class="row">
-                                <div class="col-xs-3">
-                                    <i class="fa fa-tasks fa-5x"></i>
-                                </div>
-                                <div class="col-xs-9 text-right">
-                                    <div class="huge">Retrain</div>
-                                    <div>Model</div>
-                                </div>
-                            </div>
-                        </div>
-                        <a href="#" class="active">
-                            <div class="panel-footer">
-                                <span class="pull-left">View Details</span>
-                                <span class="pull-right"><i class="fa fa-arrow-circle-right"></i></span>
-                                <div class="clearfix"></div>
-                            </div>
-                        </a>
-                    </div></li>
-                        
-                        <li class="in">
-                            <div class="panel panel-red">
+                            <div class="panel panel-green">
                         <div class="panel-heading">
                             <div class="row">
                                 <div class="col-xs-3">
@@ -374,9 +331,7 @@
                                 </div>
                             </div>
                             <div class="row">
-                                <div class="col-sm-4"></div>
-                                <div class="col-sm-4" align="center">
-                                    <p id="results"></p>
+                                <div class="col-sm-8" align="center" id="results-pane">
                                 </div>
                                 <div class="col-sm-4"></div>
                             </div>
@@ -442,62 +397,6 @@
                         <!-- /.panel-body -->
                     </div>
                     <!-- /.panel -->
-                    
-                    <!-- /.panel -->
-                    <div class="chat-panel panel panel-default">
-                        <div class="panel-heading">
-                            <i class="fa fa-comments fa-fw"></i> Chat
-                            <div class="btn-group pull-right">
-                                <button type="button" class="btn btn-default btn-xs dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-                                    <i class="fa fa-chevron-down"></i>
-                                </button>
-                                <ul class="dropdown-menu slidedown">
-                                    <li>
-                                        <a href="#">
-                                            <i class="fa fa-refresh fa-fw"></i> Refresh
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="#">
-                                            <i class="fa fa-check-circle fa-fw"></i> Available
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="#">
-                                            <i class="fa fa-times fa-fw"></i> Busy
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="#">
-                                            <i class="fa fa-clock-o fa-fw"></i> Away
-                                        </a>
-                                    </li>
-                                    <li class="divider"></li>
-                                    <li>
-                                        <a href="#">
-                                            <i class="fa fa-sign-out fa-fw"></i> Sign Out
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-                        <!-- /.panel-heading -->
-                        <div class="device-container">
-                        <div class="device-mockup iphone6_plus portrait white">
-                            <div class="device">
-                                <div class="screen">
-                                    <!-- Demo image for screen mockup, you can put an image here, some HTML, an animation, video, or anything else! -->
-                                    <iframe style="position: relative; height: 100%; width: 100%;" src="https://console.api.ai/api-client/demo/embedded/0e680a7d-081b-433c-ba0d-8cde5ec8f2ce"></iframe>
-                                </div>
-                                <div class="button">
-                                    <!-- You can hook the "home button" to some JavaScript events or just remove it -->
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                        <!-- /.panel-footer -->
-                    </div>
-                    <!-- /.panel .chat-panel -->
                 </div>
                 <!-- /.col-lg-4 -->
             </div>
@@ -519,8 +418,8 @@
             </button>
           </div>
           <div class="modal-body">
-              <button data-dismiss="modal" id="cnn-model-1.0">CNN Version 1.0</button>
-              <button data-dismiss="modal" id="lstm-model-1.0">LSTM Version 1.0</button>
+              <button data-dismiss="modal" class="model-select-button" id="cnn-model-1.0">CNN Version 1.0</button>
+              <button data-dismiss="modal" class="model-select-button" id="lstm-model-1.0">LSTM Version 1.0</button>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
