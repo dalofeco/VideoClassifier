@@ -201,7 +201,17 @@ class RNNClassifier(Classifier):
         
         frame_sequence = np.array(frame_sequence)
         frame_sequence = np.reshape(frame_sequence, [1, 16, 2048])
-        print(frame_sequence.shape)
+        
+        # Define a sequences array for batch logistics
+        sequences = []
+        sequences.append(frame_sequence)
+        
+        # Add empty sequences for rest of batches
+        for i in range(0,batchSize-1):
+            sequences.append(np.zeros([1,16,2048]))
+            
+        # Reshape tensor to approp size
+        sequences = np.reshape(sequences, [8,16,2048])
         
         # processedSequence = self.processFrameSequence(frame_sequence)
         
@@ -209,12 +219,12 @@ class RNNClassifier(Classifier):
         x_input = self.sess.graph.get_tensor_by_name("x_batch_ph/Placeholder:0") 
         
         # Define cell and hidden state to zeroes
-        _current_cell_state = np.zeros((1, 2048))
-        _current_hidden_state = np.zeros((1, 2048))
+        _current_cell_state = np.zeros((batchSize, 2048))
+        _current_hidden_state = np.zeros((batchSize, 2048))
             
         # Get predictions from softmax tensor layer
         predictions = self.sess.run(self.rnn_softmax_tensor, {
-            "x_batch_ph/Placeholder:0": frame_sequence,
+            "x_batch_ph/Placeholder:0": sequences,
             "Placeholder:0": _current_cell_state,
             "Placeholder_1:0": _current_hidden_state,
         })
