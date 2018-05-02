@@ -9,11 +9,11 @@ var ws = null
 var STREAMING = false
 
 // Intervals for timed interval functions
-const SEND_TIME_INTERVAL = 500;
-const FRAME_TIME_INTERVAL = 100;
+const SEND_TIME_INTERVAL = 1000;
+const FRAME_TIME_INTERVAL = 250;
 
 // Define number of frames to send in a single batch
-var NUMBER_OF_FRAMES = 16;
+var NUMBER_OF_FRAMES =  4;
 
 var MODEL_TYPE = "cnn-model-1.0"
 
