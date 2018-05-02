@@ -605,7 +605,7 @@ class RNNTrainer(Trainer):
                 os.makedirs(self.model_output_dir)
 
             # Save the finalized model
-            save_path = saver.save(sess, self.model_output_dir);
+            save_path = saver.save(sess, self.model_output_dir + "lstm-model");
             
             print("Saved RNN model to: {}".format(save_path));
             
