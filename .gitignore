@@ -8,7 +8,6 @@
 *tf_files*
 */videos/*
 */dataset/*
-VideoCache/*
 
 .vscode
 *.sync
@@ -16,6 +15,5 @@ VideoCache/*
 tests
 tensorflow
 
-Docker
 
 !*/.empty

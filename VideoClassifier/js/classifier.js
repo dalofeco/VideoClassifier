@@ -269,7 +269,7 @@ function b64Encode(imageBlob, callback) {
     reader.addEventListener('loadend', (e) => {
 
         // Get image blob from result
-        const imageBlobText = e.srcElement.result;
+        const imageBlobText = e.target.result;
 
         var b64image = btoa(imageBlobText)
         
@@ -307,7 +307,7 @@ function getFrame(callback) {
 
 // ---------------- FILE PICKER ----------------
 // Function for when file picker selection changes
-function selectFile(e) {
+function selectFile(event) {
     
     // Get file name if picked
     if (event.target.files.length == 1) {
