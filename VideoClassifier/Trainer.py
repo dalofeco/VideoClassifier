@@ -12,8 +12,12 @@ import time, datetime
 import os, sys, pickle
 from tqdm import tqdm
 
+import utils
+
 import Classifier
 import Categories
+
+from NeuralNetworks import LSTM
 
 # Base Trainer Class for CNNTrainer and RNNTrainer
 class Trainer():
@@ -25,13 +29,6 @@ class Trainer():
         self.tf_files_dir = "../Models/tf_files-v{0}/".format(modelVersion)
         self.dataset_dir = self.tf_files_dir + 'dataset/cnn/'
         self.modelVersion = modelVersion;
-        
-    # Simple function wrapping mkdir in catch FileExistsError
-    def tryCreateDirectory(self, dir):
-        try:
-            os.mkdir(dir);
-        except FileExistsError:
-            pass
         
     # Exports .pb file into tensorboard graphable logs
     def extractTBfromGraph(self):
@@ -106,318 +103,183 @@ class RNNTrainer(Trainer):
         # Save labels to be considered
         self.labels = labels;
         
-        
         # Initialize dataset directory
         self.dataset_dir = self.tf_files_dir + 'dataset/rnn/'
-        self.sequences_dir = self.tf_files_dir + 'sequences/'
+        
+        # Directory for CNN extracted frame features
         self.features_dir = self.tf_files_dir + 'features/'
-        self.checkpoint_path = self.tf_files_dir + "rnn-checkpoints/" # Training checkpoints
-        self.model_output_dir = self.tf_files_dir + "rnn-model/"; # Model output dir
-        self.tb_log_dir = self.tf_files_dir + "rnn-logs/"; # TensorBoard log dir
+        
+        # Directory for batches
+        self.batches_dir = self.tf_files_dir + 'batches/'
+        
+        # Directory for training checkpoints
+        self.checkpoint_path = self.tf_files_dir + "rnn-checkpoints/" 
+        
+        # Directory to output model
+        self.model_output_dir = self.tf_files_dir + "rnn-model/";
+        
+        # TensorBoard log directory
+        self.tb_log_dir = self.tf_files_dir + "rnn-logs/";
         
         # Make sure all directories exist or create them
-        self.tryCreateDirectory(self.features_dir)
-        self.tryCreateDirectory(self.sequences_dir)
-        self.tryCreateDirectory(self.features_dir)
-        self.tryCreateDirectory(self.checkpoint_path)
-        self.tryCreateDirectory(self.model_output_dir)
-        self.tryCreateDirectory(self.tb_log_dir)
+        utils.tryCreateDirectory(self.features_dir)
+        utils.tryCreateDirectory(self.features_dir)
+        utils.tryCreateDirectory(self.batches_dir)
+        utils.tryCreateDirectory(self.checkpoint_path)
+        utils.tryCreateDirectory(self.model_output_dir)
+        utils.tryCreateDirectory(self.tb_log_dir)
+        
+        # Initialize CNN class 
+        self.cnn = CNN(self.tf_files_dir, labels)
+        
+        # Initialize LSTM class for specified labels
+        self.lstm = LSTM(self.tf_files_dir, labels)
+        
+        # # Define the number of epochs to train for
+        self.num_epochs = 3 
+        
+        # Define number of frames features to load at once during training
+        self.batch_size = 20;
         
         
-        # DEFINE LSTM RNN OPTIONS
-        self.num_epochs = 3 # Number of epochs to train for
-        self.state_size = 2048 # Define state size
-        self.num_classes = len(self.labels) # Define the num of classification classes
-        self.truncated_backprop_length = 16 # Frames lookback length (len of sequences)
-        self.batch_size = 8 # Number of frame sequences to consider at once
-        self.input_length = 2048 # 2048-d vector length for image features before pooling layer from image classifier CNN 
-        
-        
-     # Extracts all features from pooling layer of CNN to dataset files for RNN training
-    def extractPoolLayerData(self):
-
-        # Performance monitoring
-        loadStart = time.time();
-
-        # Reads graph from file
-        with tf.gfile.FastGFile(self.tf_files_dir + "retrained_graph.pb", 'rb') as f:
-            graph_def = tf.GraphDef()
-            graph_def.ParseFromString(f.read())
-            _ = tf.import_graph_def(graph_def, name='')
-
-            with tf.Session() as sess:
-
-                # Feed the image_data as input to the graph and get pool tensor layer
-                pool_tensor = sess.graph.get_tensor_by_name('pool_3:0')
-
-                print("Loaded tensor in %.2f seconds" % (time.time() - loadStart));
-                       
-                # Do for all labeled categories
-                for label in self.labels:
-                    
-                    # Generate output folder directory and create folder
-                    output_folder_dir = self.features_dir + label + '/';
-                    self.tryCreateDirectory(output_folder_dir);
-                    
-                    # Get videos within category
-                    videos = os.listdir(self.dataset_dir + label)
-                    
-                    # Performance monitoring
-                    labelStart = time.time();
-                    
-                    # Progress bar
-                    pbar = tqdm(total=len(videos))
-
-                    # For each video
-                    for video in videos:
-                    
-                        # Load images (frames)
-                        frames = [];
-                        imagesDir = self.dataset_dir + label + '/' + video + '/'
-                        imageNames = os.listdir(imagesDir);
-
-                        # Set pool features output directory to video name
-                        output_dir = output_folder_dir + video + '.dat';
-
-                        # Skip files that aleady exists (already processed)
-                        if (os.path.exists(output_dir)):
-                            pbar.update(1)
-                            continue
-
-                        # Store all features in sequential array
-                        cnn_features = []
-
-                        # For every image in the video frames directory
-                        for i, imageName in enumerate(imageNames):
-
-                            # Load image data
-                            image_data = tf.gfile.FastGFile(imagesDir + imageName, 'rb').read()
-
-                            # Run CNN and extract pool tensor representation
-                            try:
-                                cnn_representation = sess.run(pool_tensor, {'DecodeJpeg/contents:0': image_data})
-                            except KeyboardInterrupt:
-                                print("Exiting... Detected CTRL+C")
-                                sys.exit()
-                            except:
-                                print("Error making prediction, continuing..");
-                                continue;
-
-                            # Save the representation
-                            frame_data = [cnn_representation, label];
-                            cnn_features.append(frame_data);
-
-
-                        # Save features of batch to output file
-                        with open(output_dir, 'wb') as featuresOutput:
-                            pickle.dump(cnn_features, featuresOutput);
-                            featuresOutput.close();
-
-                        # Update progress bar
-                        pbar.update(1);
-
-                    # Close progress bar
-                    pbar.close()
-                    
-                    # Log label loading time
-                    print (label + " processed in %d seconds!" % (time.time() - labelStart))
-                        
-                        
-    # Get the data from our saved predictions/pooled features, 
-    # and extract feature sequences, saving them to disk
-    #
-    # RETURNS:
-    #   sequence_length: <int> - the number of sequences processed
-    #
-    def extractFeatures(self):
+    # Extracts frame features from pooling layer of CNN to dataset files 
+    # of defined batch size for RNN training
+    # 
+    def prepareDatasetBatches(self):
         
         # Performance metrics
         start = time.time();
-
-        # X and y for dataset
-        X = []
-        y = []
-
-        # Initialize featuresDeque for serving as frame features buffer
-        featuresDeque = deque()
         
-        # Initiate num of categories to 0
-        num_categories = 0
+        # Keep track of batch number
+        batch_number = 1;
+        
+        # For all labeled categories
+        for label in self.labels:
 
-        # Iterate through all category folders
-        categories = os.listdir(self.features_dir)
-        for category in self.labels:
+            # Performance metrics of label processing
+            labelStart = time.time();
 
-            # Count num of categories
-            num_categories += 1;
+            # Initialize progress bar that updates for each video
+            pbar = tqdm(total=len(videos))
 
-            # List video features files
-            videosFeatures = os.listdir(self.features_dir + category);
-            
-            # Progress bar and start time for performance metrics
-            pbar = tqdm(total=len(videosFeatures))
-            startTime = time.time()
+            # Generate output folder directory and create folder
+            output_folder_dir = self.batches_dir + label + '/';
+            utils.tryCreateDirectory(output_folder_dir);
 
-            # For each feature in the video batch
-            for videoFeatures in videosFeatures:
+            # Enumerate video names for category
+            videos = os.listdir(self.dataset_dir + label)
 
-                # Define full path for video features
-                videoFeaturesPath = self.features_dir + category + '/' + videoFeatures
-                
-                # Declaration for scoping reasons
-                actualLabel = "";
+            # For each video
+            for video in videos:
 
-                # Open and get the features.
-                with open(videoFeaturesPath, 'rb') as fin:
-                    frameFeatures = pickle.load(fin)
+                # Load images (frames)
+                frames = [];
+                imagesDir = self.dataset_dir + label + '/' + video + '/'
+                imageNames = os.listdir(imagesDir);
+                    
+                # Define X and y batch arrays
+                X_batch = []
+                y_batch = []
 
-                    # Enumerate and iterate through frames
-                    for i, frame in enumerate(frameFeatures):
+                # For every image in the video frames directory
+                for i, imageName in enumerate(imageNames):
+
+                    # Load image data
+                    image_data = tf.gfile.FastGFile(imagesDir + imageName, 'rb').read()
+                    
+                    # Define cnn_representation and label to None for scoping purposes
+                    cnn_representation = None;
+                    label = None
+
+                    # Catch exceptions
+                    try:
+                        # Extract pool tensor representation from CNN
+                        cnn_representation = self.cnn.extractPoolLayerData(image_data)
+                        label = self.cnn.classifyImage(image_data)
+
+                    except KeyboardInterrupt:
+                        print("Exiting... Detected CTRL+C")
+                        sys.exit()
+
+                    # Catch any possible exceptions
+                    except:
+                        print("Error extracting pool layer data for: " + str(image_path));
+                        continue;
                         
-                        # Only for every four frames
-                        if (i % 4) == 0:          
+                    # Create an entry for each possible label and set the corresponding to 1
+                    oneHotList = np.zeros(len(self.labels))
+                    oneHotList[Categories.labelToNum(label)] = 1
+                        
+                    # Add features to X and y batches
+                    X_batch.append(cnn_representation)
+                    y_batch.append(oneHotList)
+                    
+                    # If batch of defined size is made, save the batch and empty the variables
+                    if (len(X_batch) == self.batch_size):
+                        
+                        # Arrange X and y batches into a tuple
+                        frame_data = (X_batch, y_batch)
+                        
+                        # Define the output file name for the specified frame features data
+                        batch_output_file_name = output_dir + "batch-" + str(batch_number) + ".dat"
+
+                        # Open the file to s
+                        with open(output_file_name, 'wb') as featuresBatchOutput:
+
+                            # Save batch of frame features (X, y) with classification and label to file and close it
+                            pickle.dump(frame_data, featuresBatchOutput);
+                            featuresBatchOutput.close();
                             
-                            # Read features and label
-                            cnnFeatures = frame[0]
-                            actualLabel = frame[1]
+                        # Define new empty X and y batches
+                        X_batch = []
+                        y_batch = []
                         
-                            # If deque of size of batch length, start adding to X and Y
-                            if (len(featuresDeque) == self.truncated_backprop_length - 1):
-                                featuresDeque.append(cnnFeatures)
-                                
-                                # Add features to X
-                                X.append(np.array(list(featuresDeque)))
-                                
-                                # Create an entry for each possible label and set the corresponding to 1
-                                oneHotList = np.zeros(len(self.labels))
-                                oneHotList[Categories.labelToNum(actualLabel)] = 1
-                                
-                                # Add to the y dataset
-                                y.append(oneHotList)
-                                
-                                # Pop oldest feature from deque
-                                featuresDeque.popleft()
-                            else:
-                                # Add to the deque
-                                featuresDeque.append(cnnFeatures)
-                        
-                        
-                            
+                        # Increment batch_number 
+                        batch_number += 1;
+
                 # Update progress bar
-                pbar.update(1)
+                pbar.update(1);
 
-            # Close progress bar and print category done message 
+            # Close progress bar
             pbar.close()
-            
-            # Calculate time for performance metrics
-            timeElapsed = time.time() - startTime
-            print(category + " finished in {:.2f} seconds.".format(timeElapsed))
 
-            
-        # Calculate length of the dataset
-        datasetLength = len(X)
+            # Log label loading time
+            print (label + " processed in %d seconds!" % (time.time() - labelStart))
             
         # Print size of dataset
-        print("Total dataset size: {}".format(datasetLength))
+        print("Dataset contains {} batches.".format(batch_number - 1))
 
-        # Convert to Numpy arrays
-        X = np.array(X)
-        y = np.array(y)
-
-        # Reshape to dimensions, with batches of defined input length
-        X = X.reshape(datasetLength, self.truncated_backprop_length, self.input_length)
-        print(y)
-        print("--")
-        print(y[0])
-        y = y.reshape(datasetLength, num_categories)
         
-        print("X Shape:")
-        print(X.shape)
-
-        print("Y Shape:")
-        print(y.shape)
-
-        # Split into train and test.
-        # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=42)
-
-        # Log loading time
-        print("Loaded data in {} seconds!".format(time.time() - start))
-        print("Starting save process")
-        
-        # Calculate num of batches
-        num_batches = len(X) // self.batch_size
-        
-        # For each batch to be created
-        for i in range(0, num_batches):
-            
-            # Define batch object to save to file
-            batch = { 'x':[], 'y':[] }
-            
-            # For each element in the batch
-            for ii in range(0, self.batch_size):
-                
-                # Calculate index in outer arrays
-                index = (i * self.batch_size) + ii
-            
-                # Append X and y elements to batch
-                batch['x'].append(X[index])
-                batch['y'].append(y[index])
-                
-                
-            # Define the file name
-            sequenceFileName = self.sequences_dir + "sequence-{}.data".format(i)
-            
-            # Open file in writing mode
-            with open(sequenceFileName, "wb+") as batchFile:
-                
-                # Dump batch object to batchfile using pickle
-                pickle.dump(batch, batchFile)
-                
-        # Log performance time
-        print("Saved feature sequences in {} seconds!".format(time.time() - start))
-        
-        # Return number of sequences
-        return num_batches
-    
-    
-    # Fetch a specified batches by number
-    #
     def fetchBatch(self, batchNumber):
         
-        # Define the batch arrays to return
-        X = None
-        y = None
+        # Define the expected batch directory
+        batch_dir = self.batches_dir + "batch" + str(batchNumber) + ".dat";
         
-        # Define the file name
-        sequenceFileName = self.sequences_dir + "sequence-{}.data".format(batchNumber)
-
-        # Open the batch file
-        with open(sequenceFileName, "rb") as batchFile:
-
-            # Load batch from file
-            batch = pickle.load(batchFile)
-
-            # Set batch entries
-            X = batch['x']
-            y = batch['y']
-
-        # Return batch data
-        return X, y
-    
+        X = None;
+        y = None;
+        
+        # Make sure batch file exists
+        if (os.path.exists(batch_dir)):
             
-    
-    
-    # Prepare data, then train
-    def autoTrain(self):
-        
-        # Extract CNN Pool Layer Data
-        self.extractPoolLayerData()
+            # Open batch file
+            with open(batch_dir) as batchFile:
+                
+                # Read batch from file and close
+                batch = pickle.loads(batchFile) 
+                batchFile.close()
+                
+                # Get X and y as numpy arrays
+                X = np.array(batch[0])
+                y = np.array(batch[1])
 
-        # Get len of series after extracting features
-        series_length = self.extractFeatures()
+                # Reshape to dimensions, with batches of defined input length
+                X = X.reshape(self.batch_size, self.input_length)
+                y = y.reshape(self.batch_size, num_categories)
 
-        # Launch training process for num of batches of batch size
-        self.train(series_length);
+                # Log loading time
+                print("Loaded batch in {} seconds!".format(time.time() - start))
+                
+        return (X, y)
         
         
     # Execute training after rnn dataset is ready
@@ -429,15 +291,14 @@ class RNNTrainer(Trainer):
         # Performance metrics
         start = time.time()
         
-        
         with tf.name_scope("x_batch_ph"):
             
             # Define X batch placeholder
-            X_batch_ph = tf.placeholder(tf.float32, [self.batch_size, self.truncated_backprop_length, self.input_length])
+            X_batch_ph = tf.placeholder(tf.float32, [self.batch_size, self.input_length])
         
         with tf.name_scope("y_batch_ph"):
 
-            # Y batch has batch_size elements, with categories for each backprop frame
+            # Y batch has batch_size elements, with categories for each frame
             y_batch_ph = tf.placeholder(tf.int32, [self.batch_size, self.num_classes])
         
         # Define cell and hidden state
@@ -450,12 +311,14 @@ class RNNTrainer(Trainer):
         with tf.name_scope('weights'):
             # Initialize weight variable tensors with random data
             W = tf.Variable(np.random.rand(self.state_size, self.num_classes), dtype=tf.float32)
+            
             # Define variable summaries for TensorBoard
             variable_summaries(W)
             
         with tf.name_scope('bias'):
             # Initialize bias variable tensors with zeroes
             b = tf.Variable(np.zeros((1 , self.num_classes)), dtype=tf.float32)
+            
             # Define variable summaries for TensorBoard
             variable_summaries(b)
         
@@ -476,8 +339,7 @@ class RNNTrainer(Trainer):
         with tf.name_scope("predictions_series"):
 
             # Define softmax layer for one-hot encoding of output classification
-            predictions_series = [tf.nn.softmax(logits) for logits in logits_series]
-            
+            predictions_series = [tf.nn.softmax(logits) for logits in logits_series]    
         
         # Predictions
         with tf.name_scope("predictions"):
@@ -485,9 +347,9 @@ class RNNTrainer(Trainer):
             # Get each top prediction for series
             predictions = [tf.argmax(prediction, 1) for prediction in predictions_series]
             
-        
         # Define name scope for ops
         with tf.name_scope("loss"):
+            
             # Define losses function
             losses = [tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels) for logits, labels in zip(logits_series, labels_series)]
 
@@ -552,7 +414,7 @@ class RNNTrainer(Trainer):
                 for batch_idx in range(num_batches):
                     
                     # Fetch x and y for current batch
-                    batchX, batchY = self.fetchBatch(batch_idx)
+                    batchX, batchY = self.fetchBatch(batch_idx + 1)
                     
                     # Calculate start and end indexes
                     start_idx = batch_idx * self.batch_size
@@ -583,11 +445,13 @@ class RNNTrainer(Trainer):
 
                     # Log training messages every 2%
                     if batch_idx % (num_batches // 50) == 0:
+                        
                         print("Step",batch_idx, "out of", num_batches,  "- Batch loss: ", _total_loss)
                         
+                # Print epoch complete message
                 print("Epoch ", epoch_idx, " completed.")
                 
-                # Define the save path
+                # Define the save path for checkpoint
                 savePathDir = self.checkpoint_path + "rnn-epoch-{}/".format(epoch_idx)
                 savePath = savePathDir + "lstm-model"
                 
